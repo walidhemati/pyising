@@ -73,8 +73,8 @@ Contributions:
         PyTorch, Triton, Warp, Numba and CUDA~C. The NumPy implementation is the test oracle.
   \item A lazy, lane-parallel bitwise comparison of uniforms against the Metropolis thresholds
         for 1-bit multi-spin coding. It is exact (equivalent to a 32-bit integer comparison)
-        and needs on average \callsPerWord{} Philox calls per 64-spin word at $T_c$ instead of
-        16.
+        and needs on average \callsPerWord{} Philox calls per 64-spin word at $T_c$
+        (\callsPerWordWarp{} counting SIMT divergence) instead of 16.
   \item A roofline analysis with two measured ceilings (copy bandwidth and Philox throughput),
         a minimal traffic model for int8 and packed spins, and an honest comparison with
         published GPU Ising codes.
@@ -151,11 +151,14 @@ the mask of still-undecided lanes,
 A lane is decided at the first bit where $u$ and the threshold differ, exactly as in an integer
 comparison; if all 32 bits agree, $u=t$ and the move is rejected. The acceptance probability is
 therefore exactly $t/2^{32}$, identical to the int8 kernels. The loop stops when $D=0$; each
-lane survives a level with probability $1/2$, so a word needs about $\log_2 64+1.3$ levels and
-two levels come from one Philox call (128 bits). We measured \callsPerWord{} Philox calls per
-word at $T_c$, i.e.\ \bitsPerSpin{} random bits per spin instead of 32. Since results do not
-depend on where the loop stops, an eager ablation that always draws 32 levels produces
-bit-identical configurations and isolates the cost of randomness.
+lane survives a level with probability $1/2$, so a word needs about $\log_2 n+1.3$ levels for
+$n$ lanes that need a random decision, and two levels come from one Philox call (128 bits). We
+measured \callsPerWord{} Philox calls per word at $T_c$, i.e.\ \bitsPerSpin{} random bits per
+spin instead of 32. On SIMT hardware a warp runs the loop until its slowest thread is done; the
+per-warp maximum is \callsPerWordWarp{} calls per word (\bitsPerSpinWarp{} bits per spin), still
+$2.5\times$ fewer than 16. Since results do not depend on where the loop stops, an eager ablation
+that always draws 32 levels produces bit-identical configurations and isolates the cost of
+randomness.
 
 \subsection{Measurements and errors}
 Energy and magnetisation are reduced on the device (every bond has exactly one colour-0 end,
@@ -196,8 +199,8 @@ one read of the own colour, one read of the other colour (neighbours shared thro
 one write of the own colour: $3\times$ the spin size per update, i.e.\ \SI{3}{B} for int8 and
 \SI{0.375}{B} for 1-bit packing. The copy-bandwidth ceiling is then \memCeilInt{} flips/ns for
 int8 and \memCeilMsc{} flips/ns for packed spins. The Philox ceiling is \rngCeilInt{} flips/ns
-for one call per four sites and \rngCeilMsc{} flips/ns for the lazy packed kernel (mean calls;
-warps execute the maximum over their lanes, so the practical RNG roof is lower).
+for one call per four sites and \rngCeilMscWarp{} flips/ns for the lazy packed kernel when the
+per-warp number of calls is charged (\rngCeilMsc{} flips/ns with the per-thread mean).
 
 \section{Validation}
 
