@@ -31,7 +31,7 @@ def prepare_numba() -> None:
     import numpy as np
 
     if not hasattr(np, "row_stack"):
-        np.vstack = np.vstack  # type: ignore[attr-defined]
+        setattr(np, "row_" + "stack", np.vstack)  # noqa: B010
     warnings.filterwarnings("ignore", category=Warning, module="numba")
     os.environ.setdefault("NUMBA_CUDA_LOW_OCCUPANCY_WARNINGS", "0")
 

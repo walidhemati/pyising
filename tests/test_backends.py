@@ -19,7 +19,7 @@ def _cls(key):
     return cls
 
 
-@pytest.mark.parametrize("key", INT8)
+@pytest.mark.parametrize("key", INT8, ids=lambda k: "/".join(k))
 @pytest.mark.parametrize("shape", [(16, 24), (8, 8, 16), (64, 32)])
 @pytest.mark.parametrize("algorithm", ["metropolis", "heatbath"])
 def test_int8_bitwise_identical(key, shape, algorithm):
@@ -36,7 +36,7 @@ def test_int8_bitwise_identical(key, shape, algorithm):
     assert e == pytest.approx(energy_per_spin(ref.get_lattice()))
 
 
-@pytest.mark.parametrize("key", MSC)
+@pytest.mark.parametrize("key", MSC, ids=lambda k: "/".join(k))
 @pytest.mark.parametrize("shape", [(128, 128), (64, 384)])
 def test_msc_bitwise_identical(key, shape):
     cls = _cls(key)
@@ -68,7 +68,8 @@ def test_set_beta_and_split_sweeps(key):
     np.testing.assert_array_equal(a.get_lattice(), b.get_lattice())
 
 
-@pytest.mark.parametrize("key", [k for k in B.REGISTRY if k[0] != "numpy"])
+@pytest.mark.parametrize("key", [k for k in B.REGISTRY if k[0] != "numpy"],
+                         ids=lambda k: "/".join(k))
 def test_hot_and_cold_starts(key):
     cls = _cls(key)
     shape = (128, 128)
