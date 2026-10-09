@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyising"
+version = "0.1.0"
+description = "Roofline-optimised 2D/3D Ising Monte Carlo on the GPU from Python: NumPy, PyTorch, Triton, Warp, Numba-CUDA and CUDA C (CuPy), int8 and 64-spin multi-spin coding."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Walid Hemati" }]
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.10", "matplotlib>=3.7"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Environment :: GPU :: NVIDIA CUDA",
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.4"]
+triton = ["torch>=2.4", "triton>=3.0"]
+warp = ["torch>=2.4", "warp-lang>=1.5"]
+numba = ["torch>=2.4", "numba>=0.60", "numba-cuda>=0.10"]
+cupy = ["torch>=2.4", "cupy-cuda12x>=13"]
+gpu = ["torch>=2.4", "triton>=3.0", "warp-lang>=1.5", "numba>=0.60", "numba-cuda>=0.10", "cupy-cuda12x>=13"]
+cluster = ["numba>=0.60"]
+dev = ["pytest>=7", "ruff>=0.5", "pillow"]
+
+[project.scripts]
+pyising = "pyising.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/walidhemati/pyising"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pyising"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/pyising/backends/cuda/ising.cu" = "pyising/backends/cuda/ising.cu"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "NPY"]
+ignore = ["N803", "N806"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["gpu: needs a CUDA GPU", "slow: long statistical test"]
+addopts = "-q"
