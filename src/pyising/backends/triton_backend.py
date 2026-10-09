@@ -119,3 +119,115 @@ class TritonInt8(IsingSimulation):
 
     def energy(self) -> float:
         return self.observables()[1]
+
+
+@triton.jit
+def _lazy_step(r, bit, thr4, thr8, a0, a1, acc, und):
+    b4 = ((thr4 >> bit) & 1).to(tl.uint64)
+    b8 = ((thr8 >> bit) & 1).to(tl.uint64)
+    zero = tl.zeros_like(r)
+    tm = (a1 & (zero - b4)) | (a0 & (zero - b8))
+    acc = acc | (und & ~r & tm)
+    und = und & ~(r ^ tm)
+    return acc, und
+
+
+@triton.jit(do_not_specialize=["t", "color", "k0", "k1", "thr4", "thr8"])
+def _msc_kernel(own_ptr, other_ptr, n_words, t, color, k0, k1, thr4, thr8,
+                NW: tl.constexpr, LY: tl.constexpr, BLOCK: tl.constexpr):
+    w = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
+    mask = w < n_words
+    y = w // NW
+    x = w - y * NW
+    p = (y + color) & 1
+    o = tl.load(own_ptr + w, mask=mask, other=0)
+    c = tl.load(other_ptr + w, mask=mask, other=0)
+    xn = tl.where(x + 1 == NW, 0, x + 1)
+    xp = tl.where(x == 0, NW - 1, x - 1)
+    nb = tl.load(other_ptr + y * NW + tl.where(p == 1, xn, xp), mask=mask, other=0)
+    hz = tl.where(p == 1, (c >> 1) | (nb << 63), (c << 1) | (nb >> 63))
+    yu = tl.where(y + 1 == LY, 0, y + 1)
+    yd = tl.where(y == 0, LY - 1, y - 1)
+    x1 = o ^ c
+    x2 = o ^ hz
+    x3 = o ^ tl.load(other_ptr + yu * NW + x, mask=mask, other=0)
+    x4 = o ^ tl.load(other_ptr + yd * NW + x, mask=mask, other=0)
+    anyb = x1 | x2 | x3 | x4
+    a0 = ~anyb
+    s1 = x1 ^ x2
+    c1 = x1 & x2
+    s2 = x3 ^ x4
+    c2 = x3 & x4
+    a2 = c1 | c2 | (s1 & s2)
+    a1 = anyb & ~a2
+    acc = tl.zeros_like(o)
+    und = tl.where(mask, a0 | a1, 0)
+    cw = w.to(tl.uint32)
+    ct = tl.zeros_like(cw) + t.to(tl.uint32)
+    cc = tl.zeros_like(cw) + color.to(tl.uint32)
+    t4 = thr4.to(tl.uint32)
+    t8 = thr8.to(tl.uint32)
+    lp = 0
+    # lazy: stop as soon as every lane of the block is decided
+    while (lp < 16) & (tl.max((und != 0).to(tl.int32), axis=0) > 0):
+        r0, r1, r2, r3 = philox_impl(cw, ct, cc, tl.zeros_like(cw) + (1 + lp).to(tl.uint32),
+                                     k0.to(tl.uint32), k1.to(tl.uint32))
+        acc, und = _lazy_step(r0.to(tl.uint64) | (r1.to(tl.uint64) << 32), 31 - 2 * lp,
+                              t4, t8, a0, a1, acc, und)
+        acc, und = _lazy_step(r2.to(tl.uint64) | (r3.to(tl.uint64) << 32), 30 - 2 * lp,
+                              t4, t8, a0, a1, acc, und)
+        lp += 1
+    tl.store(own_ptr + w, o ^ (a2 | acc), mask=mask)
+
+
+class TritonMultiSpin(TritonInt8):
+    """Multi-spin coding in Triton: uint64 tiles, bit-sliced counts, block-lazy uniforms."""
+
+    variant = "msc"
+    dims = (2,)
+    algorithms = ("metropolis",)
+    layout_multiple = 128
+    stream = "msc"
+    bytes_per_update = 3.0 / 8.0
+    block = 64
+
+    def _setup(self) -> None:
+        self.dev = torch.device("cuda")
+        self.nw = self.lh // 64
+        self.n_words = self.rows * self.nw
+        self.w = [torch.zeros((self.rows, self.nw), dtype=torch.uint64, device=self.dev)
+                  for _ in range(2)]
+        self.k0, self.k1 = split_seed(self.seed)
+
+    def _upload_table(self) -> None:
+        pass
+
+    def _half_sweep(self, color: int) -> None:
+        grid = (triton.cdiv(self.n_words, self.block),)
+        _msc_kernel[grid](self.w[color], self.w[1 - color], self.n_words, self.t, color,
+                          self.k0, self.k1, int(self.table[3]), int(self.table[4]),
+                          NW=self.nw, LY=self.shape[0], BLOCK=self.block,
+                          num_warps=max(1, self.block // 32))
+
+    def get_lattice(self) -> np.ndarray:
+        w0, w1 = (x.view(torch.int64).cpu().numpy().view(np.uint64) for x in self.w)
+        return from_compressed(unpack_bits(w0), unpack_bits(w1), self.shape)
+
+    def set_lattice(self, lat: np.ndarray) -> None:
+        c0, c1 = to_compressed(np.asarray(lat, dtype=np.int8).reshape(self.shape))
+        self.w = [torch.as_tensor(pack_bits(x).view(np.int64), device=self.dev)
+                  .view(torch.uint64) for x in (c0, c1)]
+
+    def _fill_cold(self) -> None:
+        self.w = [torch.full((self.rows, self.nw), -1, dtype=torch.int64, device=self.dev)
+                  .view(torch.uint64) for _ in range(2)]
+
+    def _fill_hot(self) -> None:
+        g = torch.Generator(device="cuda").manual_seed(self.seed & 0x7FFFFFFFFFFFFFFF)
+        self.w = [torch.randint(-2**63, 2**63 - 1, (self.rows, self.nw), generator=g,
+                                device="cuda", dtype=torch.int64).view(torch.uint64)
+                  for _ in range(2)]
+
+    def observables(self) -> tuple[float, float]:
+        w = [x.view(torch.int64) for x in self.w]
+        return observables_packed(w[0], w[1], self.shape)
