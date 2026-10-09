@@ -2,6 +2,7 @@
 
     python bench/run.py --quick   # < 2 min smoke run -> results/dev-quick.json (provisional)
     python bench/run.py --full    # publishable run   -> results/rtx3070-laptop.json
+    python bench/run.py --dev     # full plan, lattices < 600 MB -> results/provisional.json
 
 Metric: attempted spin updates per nanosecond ("flips/ns"), at the critical temperature, hot
 start, Metropolis unless stated. Minimal DRAM traffic model per update: read own spin, read the
@@ -145,6 +146,9 @@ def main() -> int:
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--quick", action="store_true")
     g.add_argument("--full", action="store_true")
+    g.add_argument("--dev", action="store_true",
+                   help="full plan restricted to lattices < 600 MB (shared-GPU development run; "
+                        "provisional)")
     ap.add_argument("--out", default=None)
     ap.add_argument("--repeats", type=int, default=5)
     ap.add_argument("--only", default=None, help="comma list of backends to run")
@@ -155,8 +159,9 @@ def main() -> int:
     plan = PLAN_QUICK if args.quick else PLAN_FULL
     min_time = 0.1 if args.quick else 0.5
     repeats = 3 if args.quick else args.repeats
-    out = Path(args.out) if args.out else ROOT / "results" / (
-        "dev-quick.json" if args.quick else "rtx3070-laptop.json")
+    name = "dev-quick.json" if args.quick else ("provisional.json" if args.dev
+                                                else "rtx3070-laptop.json")
+    out = Path(args.out) if args.out else ROOT / "results" / name
     only = set(args.only.split(",")) if args.only else None
 
     t_start = time.time()
@@ -175,8 +180,12 @@ def main() -> int:
             continue
         beta = BETA_C_2D if dim == 2 else BETA_C_3D
         for L in sizes:
+            if L == "max" and args.dev:
+                continue
             L = max_size(cls, dim) if L == "max" else int(L)
             shape = (L,) * dim
+            if args.dev and L**dim * cls.bytes_per_update / 3.0 > 600e6:
+                continue
             try:
                 r = time_one(cls, shape, algorithm, beta, repeats, min_time)
             except Exception as exc:  # noqa: BLE001 - e.g. out of memory: record and continue
@@ -219,8 +228,9 @@ def main() -> int:
                   flush=True)
             gc.collect()
             torch.cuda.empty_cache()
-    res = {"machine": machine_info(), "ceiling": ceiling, "provisional": bool(args.quick),
-           "mode": "quick" if args.quick else "full", "runs": runs,
+    mode = "quick" if args.quick else ("dev" if args.dev else "full")
+    res = {"machine": machine_info(), "ceiling": ceiling, "provisional": mode != "full",
+           "mode": mode, "runs": runs,
            "seconds": round(time.time() - t_start, 1)}
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(res, indent=1))

@@ -27,7 +27,7 @@ from .lattice import random_lattice
 from .observables import crossing, sample
 
 QUICK = {
-    "L2": 64, "T2": [1.8, 2.1, TC_2D, 2.5, 3.0], "therm": 1000, "meas": 500, "every": 4,
+    "L2": 128, "T2": [1.8, 2.1, TC_2D, 2.5, 3.0], "therm": 1000, "meas": 500, "every": 4,
     "binder2_L": [8, 16], "binder2_T": list(np.linspace(2.2, 2.34, 5)), "binder_meas": 1000,
     "binder3_L": [4, 8], "binder3_T": list(np.linspace(4.45, 4.57, 5)),
     "L3": 16, "T3": [4.0, TC_3D, 5.0],
@@ -40,6 +40,19 @@ FULL = {
     "binder3_L": [8, 16, 32], "binder3_T": list(np.round(np.linspace(4.47, 4.55, 9), 4)),
     "L3": 32, "T3": [3.5, 4.2, TC_3D, 5.0, 6.0],
 }
+
+
+def equilibrated(shape: tuple[int, ...], T: float, seed: int, sweeps: int = 300) -> np.ndarray:
+    """Equilibrium start from Wolff cluster updates (removes the critical-slowing-down
+    thermalisation bias of local updates started hot or cold)."""
+    w = Wolff(shape, 1.0 / T, seed=seed)
+    w.sweep(sweeps)
+    return w.spins.reshape(shape).copy()
+
+
+def _n_meas(cfg: dict, T: float, tc: float) -> int:
+    """Four times more measurements within 0.15 of T_c, where autocorrelations are longest."""
+    return cfg["meas"] * (4 if abs(T - tc) < 0.15 * tc / 2.27 else 1)
 
 
 def _pick(variant: str, dim: int = 2, algorithm: str = "metropolis") -> tuple[str, str]:
@@ -88,8 +101,8 @@ def energy_scan_2d(cfg: dict, log=print) -> list[dict]:
         be, var = _pick(variant, 2, alg)
         for T in cfg["T2"]:
             sim = B.create(be, var, shape=(L, L), beta=1.0 / T, seed=7, algorithm=alg,
-                           init="cold" if T < TC_2D else "hot")
-            s = sample(sim, cfg["therm"], cfg["meas"], cfg["every"]).summary()
+                           init=equilibrated((L, L), T, seed=int(1000 * T)))
+            s = sample(sim, cfg["therm"], _n_meas(cfg, T, TC_2D), cfg["every"]).summary()
             e_ex = energy_torus(T, L)
             row = {"backend": be, "variant": var, "algorithm": alg, "L": L, "T": float(T),
                    **s, "e_exact_L": e_ex, "e_exact_inf": float(_e_inf(T)),
@@ -139,12 +152,12 @@ def scan_3d(cfg: dict, log=print) -> list[dict]:
     L = cfg["L3"]
     for T in cfg["T3"]:
         w = Wolff((L, L, L), 1.0 / T, seed=5)
-        ws = sample(w, 200, cfg["meas"], 1).summary()
+        ws = sample(w, 200, _n_meas(cfg, T, TC_3D), 1).summary()
         for alg in ("metropolis", "heatbath"):
             be, var = _pick("int8", 3, alg)
             sim = B.create(be, var, shape=(L, L, L), beta=1.0 / T, seed=11, algorithm=alg,
-                           init="cold" if T < TC_3D else "hot")
-            s = sample(sim, cfg["therm"], cfg["meas"], cfg["every"]).summary()
+                           init=w.spins.reshape(L, L, L).copy())
+            s = sample(sim, cfg["therm"], _n_meas(cfg, T, TC_3D), cfg["every"]).summary()
             err = float(np.hypot(s["e_err"], ws["e_err"]))
             rows.append({"backend": be, "variant": var, "algorithm": alg, "L": L, "T": float(T),
                          **s, "wolff_e": ws["e"], "wolff_e_err": ws["e_err"],

@@ -9,15 +9,16 @@ import numpy as np
 from . import backends as B
 
 
-def quench_gif(out: str | Path, L: int = 512, T: float = 1.5, frames: int = 60,
-               backend: str = "cupy-cuda-c", variant: str = "msc", size: int = 384,
-               seed: int = 3) -> Path:
-    """Write an animated GIF; frame ``k`` is taken after ~``1.12^k`` sweeps (log time)."""
+def quench_gif(out: str | Path, L: int = 1024, T: float = 1.5, frames: int = 60,
+               backend: str = "cupy-cuda-c", variant: str = "msc", size: int = 512,
+               seed: int = 3, t_max: int = 800) -> Path:
+    """Write an animated GIF of a ``size x size`` window; frames log-spaced in time up to
+    ``t_max`` sweeps (domains grow like sqrt(t), so the lattice never fully orders)."""
     from PIL import Image
 
     cls = B.load(backend, variant) or B.load("numpy", "int8")
     sim = cls((L, L), 1.0 / T, seed=seed, init="hot")
-    times = np.unique(np.round(1.13 ** np.arange(frames * 2)).astype(int))[:frames]
+    times = np.unique(np.round(np.geomspace(1, t_max, frames)).astype(int))
     pal = [24, 28, 48, 236, 232, 222]  # spin down: ink, spin up: paper
     imgs = []
     done = 0

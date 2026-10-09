@@ -105,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
     sv.add_argument("--out", default="results/validation.json")
     sm = sub.add_parser("movie", help="GIF of domain coarsening after a quench")
     sm.add_argument("--out", default="docs/media/quench.gif")
-    sm.add_argument("--L", type=int, default=512)
+    sm.add_argument("--L", type=int, default=1024)
     sm.add_argument("--T", type=float, default=1.5)
     sm.add_argument("--frames", type=int, default=60)
     sm.add_argument("--backend", default="cupy-cuda-c")

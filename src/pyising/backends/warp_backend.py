@@ -12,6 +12,7 @@ from .base import IsingSimulation
 from .observables_torch import observables_int8, observables_packed
 
 wp.config.quiet = True
+wp.config.verbose = False
 wp.init()
 
 vec4u = wp.types.vector(length=4, dtype=wp.uint32)
