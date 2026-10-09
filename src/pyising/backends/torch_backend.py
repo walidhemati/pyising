@@ -99,6 +99,14 @@ class TorchEager(IsingSimulation):
         c0, c1 = to_compressed(np.asarray(lat, dtype=np.int8).reshape(self.shape))
         self.c = [torch.as_tensor(c0, device=self.dev), torch.as_tensor(c1, device=self.dev)]
 
+    def _fill_hot(self) -> None:
+        if self.dev.type != "cuda":
+            return super()._fill_hot()
+        from .observables_torch import device_random_int8
+
+        self.c = [device_random_int8(self.rows * self.lh, self.seed + c).view(self.rows, self.lh)
+                  for c in (0, 1)]
+
     def synchronize(self) -> None:
         if self.dev.type == "cuda":
             torch.cuda.synchronize()

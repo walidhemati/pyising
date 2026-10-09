@@ -15,7 +15,12 @@ from numba import cuda, int32, uint32, uint64  # noqa: E402
 from ..lattice import from_compressed, pack_bits, to_compressed, unpack_bits  # noqa: E402
 from ..philox import M0, M1, W0, W1, split_seed  # noqa: E402
 from .base import IsingSimulation  # noqa: E402
-from .observables_torch import observables_int8, observables_packed  # noqa: E402
+from .observables_torch import (  # noqa: E402
+    device_random_int8,
+    device_random_words,
+    observables_int8,
+    observables_packed,
+)
 
 _M0, _M1 = np.uint64(M0), np.uint64(M1)
 _W0, _W1 = np.uint32(W0), np.uint32(W1)
@@ -207,6 +212,10 @@ class NumbaInt8(_NumbaBase):
         self.c = [cuda.to_device(c0.reshape(-1).view(np.uint32)),
                   cuda.to_device(c1.reshape(-1).view(np.uint32))]
 
+    def _fill_hot(self) -> None:
+        self._keep = [device_random_int8(self.rows * self.lh, self.seed + c) for c in (0, 1)]
+        self.c = [cuda.as_cuda_array(t.view(torch.int32)).view(np.uint32) for t in self._keep]
+
     def observables(self) -> tuple[float, float]:
         c = [torch.as_tensor(x.view(np.int32), device="cuda").view(torch.int8)
              .view(self.rows, self.lh) for x in self.c]
@@ -245,7 +254,11 @@ class NumbaMultiSpin(_NumbaBase):
         self.w = [cuda.to_device(pack_bits(c0).reshape(-1)),
                   cuda.to_device(pack_bits(c1).reshape(-1))]
 
+    def _fill_hot(self) -> None:
+        self._keep = [device_random_words(self.rows * self.nw, self.seed + c) for c in (0, 1)]
+        self.w = [cuda.as_cuda_array(t).view(np.uint64) for t in self._keep]
+
     def observables(self) -> tuple[float, float]:
-        w = [torch.as_tensor(x, device="cuda").view(torch.int64).view(self.rows, self.nw)
+        w = [torch.as_tensor(x.view(np.int64), device="cuda").view(self.rows, self.nw)
              for x in self.w]
         return observables_packed(w[0], w[1], self.shape)

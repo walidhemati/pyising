@@ -13,6 +13,18 @@ from ..lattice import row_parity
 CHUNK_ELEMS = 1 << 24
 
 
+def device_random_int8(n: int, seed: int) -> torch.Tensor:
+    """``n`` i.i.d. +-1 int8 spins generated on the GPU in place (no host round trip)."""
+    g = torch.Generator(device="cuda").manual_seed(seed & 0x7FFFFFFFFFFFFFFF)
+    return torch.randint(0, 2, (n,), generator=g, device="cuda", dtype=torch.int8).mul_(2).sub_(1)
+
+
+def device_random_words(n: int, seed: int) -> torch.Tensor:
+    """``n`` uniformly random 64-bit words (int64 tensor) generated on the GPU."""
+    g = torch.Generator(device="cuda").manual_seed(seed & 0x7FFFFFFFFFFFFFFF)
+    return torch.randint(-2**63, 2**63 - 1, (n,), generator=g, device="cuda", dtype=torch.int64)
+
+
 def _row_neighbors(rows: torch.Tensor, shape: tuple[int, ...]) -> list[torch.Tensor]:
     """Flattened row indices of the +-1 neighbours along every non-x axis."""
     ly = shape[-2]

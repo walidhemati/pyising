@@ -39,8 +39,8 @@ PLAN_FULL: list[tuple[str, str, int, list[int], str]] = [
     # backend, variant, dim, sizes, algorithm
     ("numpy", "int8", 2, [1024], "metropolis"),
     ("numpy", "msc", 2, [1024], "metropolis"),
-    ("torch-eager", "int8", 2, [1024, 4096, 16384], "metropolis"),
-    ("torch-compile", "int8", 2, [1024, 4096, 16384], "metropolis"),
+    ("torch-eager", "int8", 2, [1024, 4096, 8192], "metropolis"),
+    ("torch-compile", "int8", 2, [1024, 4096, 8192], "metropolis"),
     ("triton", "int8", 2, FULL_2D, "metropolis"),
     ("warp", "int8", 2, FULL_2D, "metropolis"),
     ("numba", "int8", 2, FULL_2D, "metropolis"),
@@ -166,7 +166,7 @@ def main() -> int:
 
     t_start = time.time()
     print("measuring ceilings ...", flush=True)
-    ceiling = roofline.measure(quick=args.quick)
+    ceiling = roofline.measure(quick=args.quick or args.dev)
     print(json.dumps(ceiling), flush=True)
     bw = ceiling["copy_bandwidth_GBs"]
     ph = ceiling["philox_calls_per_ns"]
@@ -184,7 +184,9 @@ def main() -> int:
                 continue
             L = max_size(cls, dim) if L == "max" else int(L)
             shape = (L,) * dim
-            if args.dev and L**dim * cls.bytes_per_update / 3.0 > 600e6:
+            # tensor-op backends hold ~20x the lattice in int64 temporaries
+            peak = L**dim * cls.bytes_per_update / 3.0 * (20 if backend.startswith("torch") else 1)
+            if args.dev and peak > 600e6:
                 continue
             try:
                 r = time_one(cls, shape, algorithm, beta, repeats, min_time)

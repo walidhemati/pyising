@@ -9,7 +9,12 @@ import warp as wp
 from ..lattice import from_compressed, pack_bits, to_compressed, unpack_bits
 from ..philox import split_seed
 from .base import IsingSimulation
-from .observables_torch import observables_int8, observables_packed
+from .observables_torch import (
+    device_random_int8,
+    device_random_words,
+    observables_int8,
+    observables_packed,
+)
 
 wp.config.quiet = True
 wp.config.verbose = False
@@ -231,6 +236,10 @@ class WarpInt8(_WarpBase):
         self.c = [wp.array(x.reshape(-1).view(np.uint32), dtype=wp.uint32, device="cuda:0")
                   for x in (c0, c1)]
 
+    def _fill_hot(self) -> None:
+        self._keep = [device_random_int8(self.rows * self.lh, self.seed + c) for c in (0, 1)]
+        self.c = [wp.from_torch(t.view(torch.int32), dtype=wp.uint32) for t in self._keep]
+
     def observables(self) -> tuple[float, float]:
         c = [wp.to_torch(x).view(torch.int8).view(self.rows, self.lh) for x in self.c]
         return observables_int8(c[0], c[1], self.shape)
@@ -266,6 +275,10 @@ class WarpMultiSpin(_WarpBase):
         c0, c1 = to_compressed(np.asarray(lat, dtype=np.int8).reshape(self.shape))
         self.w = [wp.array(pack_bits(x).reshape(-1), dtype=wp.uint64, device="cuda:0")
                   for x in (c0, c1)]
+
+    def _fill_hot(self) -> None:
+        self._keep = [device_random_words(self.rows * self.nw, self.seed + c) for c in (0, 1)]
+        self.w = [wp.from_torch(t, dtype=wp.uint64) for t in self._keep]
 
     def observables(self) -> tuple[float, float]:
         w = [wp.to_torch(x).view(torch.int64).view(self.rows, self.nw) for x in self.w]
