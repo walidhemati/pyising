@@ -10,7 +10,7 @@ from ._gpu import prepare_numba
 
 prepare_numba()
 import torch  # noqa: E402
-from numba import cuda, uint32, uint64  # noqa: E402
+from numba import cuda, int32, uint32, uint64  # noqa: E402
 
 from ..lattice import from_compressed, pack_bits, to_compressed, unpack_bits  # noqa: E402
 from ..philox import M0, M1, W0, W1, split_seed  # noqa: E402
@@ -45,44 +45,59 @@ def philox4x32_10(c0, c1, c2, c3, k0, k1):
 
 @functools.cache
 def _int8_kernel(LH: int, LY: int, LZ: int, NDIM: int, HEATBATH: bool):
+    """4 int8 spins per thread, moved as one 32-bit word (the ``char4`` of the CUDA C code)."""
     two_d = 2 * NDIM
+    NQ = LH // 4
+
+    @cuda.jit(device=True, inline=True)
+    def sbyte(word, k):
+        b = int32((word >> uint32(8 * k)) & uint32(0xFF))
+        return b - int32(256) if b >= int32(128) else b
 
     @cuda.jit(device=True, inline=True)
     def update(s, h, u, table):
         if HEATBATH:
-            return 1 if u < table[(h + two_d) // 2] else -1
-        x = s * h
-        return -s if (x <= 0 or u < table[(x + two_d) // 2]) else s
+            return int32(1) if u < table[int32(h + two_d) // int32(2)] else int32(-1)
+        x = int32(s * h)
+        return -s if (x <= 0 or u < table[(x + int32(two_d)) // int32(2)]) else s
 
     @cuda.jit
     def kernel(own, other, table, n_quads, t, color, k0, k1):
         q = cuda.grid(1)
         if q >= n_quads:
             return
-        n = q * 4
-        row = n // LH
-        j = n - row * LH
+        row = q // NQ
+        jq = q - row * NQ
         y = row % LY
         z = row // LY
         p = (y + z + color) & 1
-        yu = (z * LY + (0 if y + 1 == LY else y + 1)) * LH + j
-        yd = (z * LY + (LY - 1 if y == 0 else y - 1)) * LH + j
-        rb = row * LH
+        rb = row * NQ
+        c = other[q]
+        up = other[(z * LY + (0 if y + 1 == LY else y + 1)) * NQ + jq]
+        dn = other[(z * LY + (LY - 1 if y == 0 else y - 1)) * NQ + jq]
+        if NDIM == 3:
+            zu = other[((0 if z + 1 == LZ else z + 1) * LY + y) * NQ + jq]
+            zd = other[((LZ - 1 if z == 0 else z - 1) * LY + y) * NQ + jq]
+        if p == 1:
+            nxt = other[rb + (0 if jq + 1 == NQ else jq + 1)]
+        else:
+            prv = other[rb + (NQ - 1 if jq == 0 else jq - 1)]
         r0, r1, r2, r3 = philox4x32_10(uint32(q), uint32(t), uint32(color), uint32(0),
                                        uint32(k0), uint32(k1))
+        s4 = own[q]
+        out = uint32(0)
         for lane in range(4):
-            h = other[n + lane] + other[yu + lane] + other[yd + lane]
+            h = sbyte(c, lane) + sbyte(up, lane) + sbyte(dn, lane)
             if NDIM == 3:
-                zu = ((0 if z + 1 == LZ else z + 1) * LY + y) * LH + j
-                zd = ((LZ - 1 if z == 0 else z - 1) * LY + y) * LH + j
-                h += other[zu + lane] + other[zd + lane]
-            jj = j + lane
+                h += sbyte(zu, lane) + sbyte(zd, lane)
             if p == 1:
-                h += other[rb + (0 if jj + 1 == LH else jj + 1)]
+                h += sbyte(nxt, 0) if lane == 3 else sbyte(c, lane + 1)
             else:
-                h += other[rb + (LH - 1 if jj == 0 else jj - 1)]
+                h += sbyte(prv, 3) if lane == 0 else sbyte(c, lane - 1)
             u = r0 if lane == 0 else (r1 if lane == 1 else (r2 if lane == 2 else r3))
-            own[n + lane] = update(int(own[n + lane]), int(h), u, table)
+            v = update(sbyte(s4, lane), h, u, table)
+            out |= (uint32(v) & uint32(0xFF)) << uint32(8 * lane)
+        own[q] = out
 
     return kernel
 
@@ -160,7 +175,7 @@ class _NumbaBase(IsingSimulation):
 
 
 class NumbaInt8(_NumbaBase):
-    """int8 compressed checkerboard; one thread per 4 sites, one Philox call per thread."""
+    """int8 compressed checkerboard; one thread per 4 sites (one 32-bit word), one Philox call."""
 
     variant = "int8"
 
@@ -169,7 +184,8 @@ class NumbaInt8(_NumbaBase):
         self.lz = self.shape[0] if self.ndim == 3 else 1
         self.kernel = _int8_kernel(self.lh, self.ly, self.lz, self.ndim,
                                    self.algorithm == "heatbath")
-        self.c = [cuda.to_device(np.ones(self.rows * self.lh, np.int8)) for _ in range(2)]
+        self.c = [cuda.to_device(np.ones(self.rows * self.lh, np.int8).view(np.uint32))
+                  for _ in range(2)]
         self.k0, self.k1 = split_seed(self.seed)
         self.n_quads = self.rows * self.lh // 4
         self._upload_table()
@@ -183,15 +199,17 @@ class NumbaInt8(_NumbaBase):
                                      self.n_quads, self.t, color, self.k0, self.k1)
 
     def get_lattice(self) -> np.ndarray:
-        c0, c1 = (x.copy_to_host().reshape(self.rows, self.lh) for x in self.c)
+        c0, c1 = (x.copy_to_host().view(np.int8).reshape(self.rows, self.lh) for x in self.c)
         return from_compressed(c0, c1, self.shape)
 
     def set_lattice(self, lat: np.ndarray) -> None:
         c0, c1 = to_compressed(np.asarray(lat, dtype=np.int8).reshape(self.shape))
-        self.c = [cuda.to_device(c0.reshape(-1)), cuda.to_device(c1.reshape(-1))]
+        self.c = [cuda.to_device(c0.reshape(-1).view(np.uint32)),
+                  cuda.to_device(c1.reshape(-1).view(np.uint32))]
 
     def observables(self) -> tuple[float, float]:
-        c = [torch.as_tensor(x, device="cuda").view(self.rows, self.lh) for x in self.c]
+        c = [torch.as_tensor(x.view(np.int32), device="cuda").view(torch.int8)
+             .view(self.rows, self.lh) for x in self.c]
         return observables_int8(c[0], c[1], self.shape)
 
 

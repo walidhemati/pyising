@@ -48,14 +48,22 @@ def site_update(s: int, h: int, u: wp.uint32, table: wp.array(dtype=wp.uint32), 
     return wp.int8(s)
 
 
+@wp.func
+def sbyte(word: wp.uint32, k: int) -> int:
+    b = int((word >> wp.uint32(8 * k)) & wp.uint32(0xFF))
+    if b >= 128:
+        return b - 256
+    return b
+
+
 @wp.kernel
-def int8_half(own: wp.array(dtype=wp.int8), other: wp.array(dtype=wp.int8),
-              table: wp.array(dtype=wp.uint32), lh: int, ly: int, lz: int, ndim: int,
+def int8_half(own: wp.array(dtype=wp.uint32), other: wp.array(dtype=wp.uint32),
+              table: wp.array(dtype=wp.uint32), nq: int, ly: int, lz: int, ndim: int,
               heatbath: int, t: wp.uint32, color: int, k0: wp.uint32, k1: wp.uint32):
-    z, y, qj = wp.tid()
-    j = qj * 4
+    """4 int8 spins per thread moved as one 32-bit word; launch grid (Lz, Ly, Lx/8)."""
+    z, y, jq = wp.tid()
     row = z * ly + y
-    n = row * lh + j
+    q = row * nq + jq
     p = (y + z + color) & 1
     yu = y + 1
     if yu == ly:
@@ -63,31 +71,51 @@ def int8_half(own: wp.array(dtype=wp.int8), other: wp.array(dtype=wp.int8),
     yd = y - 1
     if yd < 0:
         yd = ly - 1
-    zu = z + 1
-    if zu == lz:
-        zu = 0
-    zd = z - 1
-    if zd < 0:
-        zd = lz - 1
-    q = wp.uint32(n // 4)
-    r = philox4x32_10(q, t, wp.uint32(color), wp.uint32(0), k0, k1)
+    c = other[q]
+    up = other[(z * ly + yu) * nq + jq]
+    dn = other[(z * ly + yd) * nq + jq]
+    zu_w = wp.uint32(0)
+    zd_w = wp.uint32(0)
+    if ndim == 3:
+        zu = z + 1
+        if zu == lz:
+            zu = 0
+        zd = z - 1
+        if zd < 0:
+            zd = lz - 1
+        zu_w = other[(zu * ly + y) * nq + jq]
+        zd_w = other[(zd * ly + y) * nq + jq]
+    side = wp.uint32(0)
+    if p == 1:
+        jn = jq + 1
+        if jn == nq:
+            jn = 0
+        side = other[row * nq + jn]
+    else:
+        jn = jq - 1
+        if jn < 0:
+            jn = nq - 1
+        side = other[row * nq + jn]
+    r = philox4x32_10(wp.uint32(q), t, wp.uint32(color), wp.uint32(0), k0, k1)
+    s4 = own[q]
+    out = wp.uint32(0)
     for lane in range(4):
-        jj = j + lane
-        h = int(other[n + lane])
-        h += int(other[(z * ly + yu) * lh + jj]) + int(other[(z * ly + yd) * lh + jj])
+        h = sbyte(c, lane) + sbyte(up, lane) + sbyte(dn, lane)
         if ndim == 3:
-            h += int(other[(zu * ly + y) * lh + jj]) + int(other[(zd * ly + y) * lh + jj])
+            h += sbyte(zu_w, lane) + sbyte(zd_w, lane)
         if p == 1:
-            jn = jj + 1
-            if jn == lh:
-                jn = 0
-            h += int(other[row * lh + jn])
+            if lane == 3:
+                h += sbyte(side, 0)
+            else:
+                h += sbyte(c, lane + 1)
         else:
-            jn = jj - 1
-            if jn < 0:
-                jn = lh - 1
-            h += int(other[row * lh + jn])
-        own[n + lane] = site_update(int(own[n + lane]), h, r[lane], table, ndim, heatbath)
+            if lane == 0:
+                h += sbyte(side, 3)
+            else:
+                h += sbyte(c, lane - 1)
+        v = site_update(sbyte(s4, lane), h, r[lane], table, ndim, heatbath)
+        out = out | ((wp.uint32(int(v)) & wp.uint32(0xFF)) << wp.uint32(8 * lane))
+    own[q] = out
 
 
 @wp.func
@@ -172,14 +200,16 @@ class _WarpBase(IsingSimulation):
 
 
 class WarpInt8(_WarpBase):
-    """int8 compressed checkerboard; launch grid ``(Lz, Ly, Lx/8)``, 4 sites per thread."""
+    """int8 compressed checkerboard; grid ``(Lz, Ly, Lx/8)``, 4 sites (one 32-bit word) per
+    thread."""
 
     variant = "int8"
 
     def _setup(self) -> None:
         self.ly = self.shape[-2]
         self.lz = self.shape[0] if self.ndim == 3 else 1
-        self.c = [wp.ones(self.rows * self.lh, dtype=wp.int8, device="cuda:0") for _ in range(2)]
+        ones = np.ones(self.rows * self.lh, np.int8).view(np.uint32)
+        self.c = [wp.array(ones, dtype=wp.uint32, device="cuda:0") for _ in range(2)]
         self.k0, self.k1 = split_seed(self.seed)
         self._upload_table()
 
@@ -188,20 +218,21 @@ class WarpInt8(_WarpBase):
 
     def _half_sweep(self, color: int) -> None:
         wp.launch(int8_half, dim=(self.lz, self.ly, self.lh // 4), device="cuda:0",
-                  inputs=[self.c[color], self.c[1 - color], self.table_d, self.lh, self.ly,
+                  inputs=[self.c[color], self.c[1 - color], self.table_d, self.lh // 4, self.ly,
                           self.lz, self.ndim, int(self.algorithm == "heatbath"),
                           wp.uint32(self.t), color, wp.uint32(self.k0), wp.uint32(self.k1)])
 
     def get_lattice(self) -> np.ndarray:
-        c0, c1 = (x.numpy().reshape(self.rows, self.lh) for x in self.c)
+        c0, c1 = (x.numpy().view(np.int8).reshape(self.rows, self.lh) for x in self.c)
         return from_compressed(c0, c1, self.shape)
 
     def set_lattice(self, lat: np.ndarray) -> None:
         c0, c1 = to_compressed(np.asarray(lat, dtype=np.int8).reshape(self.shape))
-        self.c = [wp.array(x.reshape(-1), dtype=wp.int8, device="cuda:0") for x in (c0, c1)]
+        self.c = [wp.array(x.reshape(-1).view(np.uint32), dtype=wp.uint32, device="cuda:0")
+                  for x in (c0, c1)]
 
     def observables(self) -> tuple[float, float]:
-        c = [wp.to_torch(x).view(self.rows, self.lh) for x in self.c]
+        c = [wp.to_torch(x).view(torch.int8).view(self.rows, self.lh) for x in self.c]
         return observables_int8(c[0], c[1], self.shape)
 
 
