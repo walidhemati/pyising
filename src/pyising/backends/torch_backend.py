@@ -120,4 +120,11 @@ class TorchCompile(TorchEager):
     variant = "int8"
 
     def _fn(self):
+        # one specialisation per (shape, colour, algorithm, seed); allow plenty of them
+        dyn = torch._dynamo.config
+        dyn.cache_size_limit = max(getattr(dyn, "cache_size_limit", 8), 256)
+        if hasattr(dyn, "recompile_limit"):
+            dyn.recompile_limit = max(dyn.recompile_limit, 256)
+        if hasattr(dyn, "accumulated_recompile_limit"):
+            dyn.accumulated_recompile_limit = max(dyn.accumulated_recompile_limit, 4096)
         return torch.compile(half_sweep_torch, dynamic=False, fullgraph=True)

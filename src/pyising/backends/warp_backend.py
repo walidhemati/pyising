@@ -144,7 +144,7 @@ def msc_half(own: wp.array(dtype=wp.uint64), other: wp.array(dtype=wp.uint64), n
     a1 = anyb & ~a2
     acc = wp.uint64(0)
     und = a0 | a1
-    lp = int(0)
+    lp = 0
     while lp < 16 and und != wp.uint64(0):
         r = philox4x32_10(wp.uint32(w), t, wp.uint32(color), wp.uint32(1 + lp), k0, k1)
         v = lazy_step(wp.uint64(r[0]) | (wp.uint64(r[1]) << wp.uint64(32)), 31 - 2 * lp, thr4,

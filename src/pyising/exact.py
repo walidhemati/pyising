@@ -33,7 +33,8 @@ def energy_2d(T: np.ndarray | float) -> np.ndarray:
     K = 1.0 / np.asarray(T, dtype=float)
     k = 2.0 * np.sinh(2 * K) / np.cosh(2 * K) ** 2
     m = np.minimum(k * k, 1.0 - 1e-16)
-    return -1.0 / np.tanh(2 * K) * (1.0 + 2.0 / np.pi * (2.0 * np.tanh(2 * K) ** 2 - 1.0) * ellipk(m))
+    t2 = np.tanh(2 * K) ** 2
+    return -1.0 / np.tanh(2 * K) * (1.0 + 2.0 / np.pi * (2.0 * t2 - 1.0) * ellipk(m))
 
 
 def _log_2cosh(x: np.ndarray) -> np.ndarray:

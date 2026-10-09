@@ -47,6 +47,7 @@ target-version = "py310"
 src = ["src"]
 
 [tool.ruff.lint]
+per-file-ignores = { "src/pyising/cluster.py" = ["NPY002"] }
 select = ["E", "F", "W", "I", "B", "UP", "NPY"]
 ignore = ["N803", "N806"]
 
@@ -54,3 +55,4 @@ ignore = ["N803", "N806"]
 testpaths = ["tests"]
 markers = ["gpu: needs a CUDA GPU", "slow: long statistical test"]
 addopts = "-q"
+pythonpath = ["src"]

@@ -106,8 +106,8 @@ class IsingSimulation(ABC):
     def set_lattice(self, lat: np.ndarray) -> None:
         """Load a full int8 host configuration."""
 
-    def _upload_table(self) -> None:  # pragma: no cover - trivial default
-        pass
+    def _upload_table(self) -> None:  # noqa: B027 - optional hook
+        """Push ``self.table`` to the device (backends that keep a device copy override)."""
 
     def _fill_hot(self) -> None:
         self.set_lattice(random_lattice(self.shape, self.seed))
@@ -115,8 +115,8 @@ class IsingSimulation(ABC):
     def _fill_cold(self) -> None:
         self.set_lattice(np.ones(self.shape, dtype=np.int8))
 
-    def synchronize(self) -> None:
-        """Block until all queued device work is done."""
+    def synchronize(self) -> None:  # noqa: B027 - optional hook
+        """Block until all queued device work is done (no-op on the CPU)."""
 
     def magnetization(self) -> float:
         """Signed magnetisation per spin."""
