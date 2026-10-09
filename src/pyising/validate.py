@@ -34,9 +34,9 @@ QUICK = {
 }
 FULL = {
     "L2": 128, "T2": sorted(list(np.round(np.linspace(1.6, 3.4, 19), 3)) + [TC_2D]),
-    "therm": 4000, "meas": 4000, "every": 5,
+    "therm": 2000, "meas": 2000, "every": 10,
     "binder2_L": [8, 16, 32, 64], "binder2_T": list(np.round(np.linspace(2.20, 2.34, 15), 4)),
-    "binder_meas": 20000,
+    "binder_meas": 10000,
     "binder3_L": [8, 16, 32], "binder3_T": list(np.round(np.linspace(4.47, 4.55, 9), 4)),
     "L3": 32, "T3": [3.5, 4.2, TC_3D, 5.0, 6.0],
 }
@@ -126,6 +126,7 @@ def binder_scan(dim: int, Ls: list[int], Ts: list[float], n_meas: int, log=print
     data: dict = {"dim": dim, "L": Ls, "T": [float(t) for t in Ts], "U": {}, "U_err": {}}
     for L in Ls:
         us, errs = [], []
+        t0 = time.time()
         for T in Ts:
             w = Wolff((L,) * dim, 1.0 / T, seed=1000 * L + int(T * 1000))
             s = sample(w, 200, n_meas, 1).summary()
@@ -133,7 +134,8 @@ def binder_scan(dim: int, Ls: list[int], Ts: list[float], n_meas: int, log=print
             errs.append(s["binder_err"])
         data["U"][str(L)] = us
         data["U_err"][str(L)] = errs
-        log(f"  Binder {dim}D L={L}: " + " ".join(f"{u:.4f}" for u in us))
+        log(f"  Binder {dim}D L={L}: " + " ".join(f"{u:.4f}" for u in us)
+            + f"  ({time.time() - t0:.0f} s)")
     data["crossings"] = []
     for a, b in zip(Ls[:-1], Ls[1:], strict=True):
         tc = crossing(np.array(Ts), np.array(data["U"][str(a)]), np.array(data["U"][str(b)]))

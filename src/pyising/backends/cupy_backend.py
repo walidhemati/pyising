@@ -134,11 +134,12 @@ class CupyMultiSpin(IsingSimulation):
                      np.uint32(color), np.uint32(self.k0), np.uint32(self.k1),
                      np.uint32(self.table[3]), np.uint32(self.table[4]), stats))
 
-    def philox_calls_per_word(self, sweeps: int = 2) -> float:
-        """Measure the mean number of Philox calls per word (diagnostic; slows the kernel)."""
-        self.stats = cp.zeros(1, dtype=cp.uint64)
+    def philox_calls_per_word(self, sweeps: int = 2, warp: bool = False) -> float:
+        """Mean Philox calls per word (diagnostic; slows the kernel). ``warp=True`` returns the
+        per-warp maximum instead, i.e. the calls the SIMT hardware actually executes."""
+        self.stats = cp.zeros(2, dtype=cp.uint64)
         self.sweep(sweeps)
-        calls = int(self.stats.get()[0])
+        calls = int(self.stats.get()[1 if warp else 0])
         self.stats = None
         return calls / (2 * sweeps * self.n_words)
 

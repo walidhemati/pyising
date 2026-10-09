@@ -135,9 +135,10 @@ def fig_roofline(bench: dict) -> None:
     ax.text(2.2, c["copy_bandwidth_GBs"] * 2.2 * 1.5, f"copy {c['copy_bandwidth_GBs']:.0f} GB/s",
             rotation=33, fontsize=6.5, ha="center")
     ph = c["philox_calls_per_ns"]
+    cpw = c.get("msc_philox_calls_per_word_warp_max_at_Tc",
+                c["msc_philox_calls_per_word_at_Tc"])
     for cps, name, xr in ((0.25, "Philox roof, 4 sites/call", (0.06, 0.6)),
-                          (c["msc_philox_calls_per_word_at_Tc"] / 64, "Philox roof, lazy bits",
-                           (0.6, 20))):
+                          (cpw / 64, "Philox roof, lazy bits (warp)", (0.6, 20))):
         ax.hlines(ph / cps, *xr, color="0.4", lw=0.9, ls=":")
         ax.text(xr[0] * 1.05, ph / cps * 1.1, name, fontsize=6.5, color="0.3")
     for r in best.values():
@@ -255,6 +256,13 @@ def write_results_tex(bench: dict, val: dict | None, bench_path: Path) -> None:
         "rngCeilInt": fmt(c["philox_calls_per_ns"] * 4, 0),
         "rngCeilMsc": fmt(c["philox_calls_per_ns"] * 64 / c["msc_philox_calls_per_word_at_Tc"],
                           0),
+        "callsPerWordWarp": fmt(c.get("msc_philox_calls_per_word_warp_max_at_Tc", float("nan")),
+                                2),
+        "bitsPerSpinWarp": fmt(c.get("msc_philox_calls_per_word_warp_max_at_Tc", float("nan"))
+                               * 2, 1),
+        "rngCeilMscWarp": fmt(c["philox_calls_per_ns"] * 64
+                              / c.get("msc_philox_calls_per_word_warp_max_at_Tc", float("nan")),
+                              0),
         "bestFlips": fmt(top["median"]),
         "bestBackend": label(top),
         "bestL": str(top["size"][0]),

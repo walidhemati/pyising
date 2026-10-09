@@ -17,6 +17,7 @@ import datetime as dt
 import gc
 import json
 import math
+import os
 import platform
 import statistics
 import sys
@@ -198,7 +199,7 @@ def main() -> int:
                 continue
             bpu = cls.bytes_per_update
             eff = r["median"] * bpu
-            calls_per_spin = (ceiling["msc_philox_calls_per_word_at_Tc"] / 64.0
+            calls_per_spin = (ceiling["msc_philox_calls_per_word_warp_max_at_Tc"] / 64.0
                               if cls.stream == "msc" else 0.25)
             if variant == "int8-rng-per-site":
                 calls_per_spin = 1.0
@@ -241,4 +242,9 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    code = main()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    # Skip interpreter teardown: with torch.compile worker pools, Warp, Numba and CuPy contexts
+    # all alive, finalisation occasionally spins forever after the JSON has been written.
+    os._exit(code)

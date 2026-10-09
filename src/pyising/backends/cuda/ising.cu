@@ -140,6 +140,12 @@ extern "C" __global__ void msc_half(u64* __restrict__ own, const u64* __restrict
         lazy_step((u64)r.z | ((u64)r.w << 32), 30 - 2 * lp, thr4, thr8, a0, a1, acc, und);
     }
     own[w] = o ^ (a2 | acc);
-    if (stats) atomicAdd(stats, (unsigned long long)calls);
+    if (stats) {  // diagnostics: per-thread calls, and per-warp maximum (what SIMT executes)
+        atomicAdd(stats, (unsigned long long)calls);
+        const unsigned mask = __activemask();
+        const int wmax = __reduce_max_sync(mask, calls);
+        if ((threadIdx.x & 31) == __ffs(mask) - 1)
+            atomicAdd(stats + 1, (unsigned long long)wmax * __popc(mask));
+    }
 }
 #endif

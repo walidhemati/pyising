@@ -56,8 +56,8 @@ def copy_bandwidth(nbytes: int = 1 << 30, repeats: int = 20) -> float:
     return statistics.median(rates)
 
 
-def philox_rate(calls: int = 512, repeats: int = 7) -> float:
-    """Median Philox4x32-10 calls per ns over the whole GPU (each call = 4 x 32-bit words)."""
+def philox_rate(calls: int = 512, repeats: int = 7, best: bool = False) -> float:
+    """Median (or best) Philox4x32-10 calls per ns over the whole GPU (4 x 32-bit words each)."""
     from pyising.backends.cupy_backend import SOURCE, cp
 
     mod = cp.RawModule(code=SOURCE.split("#ifdef LH")[0] + PHILOX_BENCH,
@@ -75,30 +75,44 @@ def philox_rate(calls: int = 512, repeats: int = 7) -> float:
         fn((blocks,), (threads,), args)
         cp.cuda.Device().synchronize()
         rates.append(threads * blocks * calls / (time.perf_counter() - t0) / 1e9)
-    return statistics.median(rates)
+    return max(rates) if best else statistics.median(rates)
 
 
-def msc_calls_per_word(L: int = 4096, beta: float | None = None) -> float:
-    """Mean Philox calls per 64-spin word of the lazy multi-spin kernel at equilibrium."""
+def msc_calls_per_word(L: int = 4096, beta: float | None = None, warp: bool = False) -> float:
+    """Mean Philox calls per 64-spin word of the lazy multi-spin kernel at equilibrium
+    (``warp=True``: per-warp maximum, the number SIMT execution actually pays)."""
     from pyising.backends.cupy_backend import CupyMultiSpin
     from pyising.exact import BETA_C_2D
 
     sim = CupyMultiSpin((L, L), BETA_C_2D if beta is None else beta, seed=1, init="hot")
     sim.sweep(200)
-    return sim.philox_calls_per_word(4)
+    return sim.philox_calls_per_word(4, warp=warp)
+
+
+#: Idle-GPU copy bandwidth measured by the suite coordinator (torch copy_, 1 GiB, 2026-10-09).
+#: Used as the ceiling in quick/dev runs, whose own measurement is distorted by a shared GPU.
+REFERENCE_COPY_GBS = 361.0
 
 
 def measure(quick: bool = False) -> dict:
-    """All ceilings as a dict (also stored in the results JSON)."""
+    """All ceilings as a dict (also stored in the results JSON).
+
+    ``quick=True`` (smoke and shared-GPU development runs): small buffers, the best rather than
+    the median Philox repeat, and the reference idle-GPU copy bandwidth as the ceiling.
+    """
     bw = copy_bandwidth(1 << 28 if quick else 1 << 30)
-    ph = philox_rate(128 if quick else 512)
+    ph = philox_rate(128 if quick else 512, repeats=15 if quick else 7, best=quick)
     cpw = msc_calls_per_word(2048 if quick else 4096)
+    cpw_warp = msc_calls_per_word(2048 if quick else 4096, warp=True)
     return {
-        "copy_bandwidth_GBs": round(bw, 1),
+        "copy_bandwidth_GBs": REFERENCE_COPY_GBS if quick else round(bw, 1),
+        "copy_bandwidth_measured_GBs": round(bw, 1),
+        "copy_bandwidth_source": "reference (coordinator, idle GPU)" if quick else "measured",
         "spec_bandwidth_GBs": SPEC_BANDWIDTH_GBS,
         "fp32_tflops": None,
         "philox_calls_per_ns": round(ph, 2),
         "msc_philox_calls_per_word_at_Tc": round(cpw, 3),
+        "msc_philox_calls_per_word_warp_max_at_Tc": round(cpw_warp, 3),
         "copy_bandwidth_bytes": (1 << 28) if quick else (1 << 30),
     }
 

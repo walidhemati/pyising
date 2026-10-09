@@ -49,18 +49,24 @@ def observables_int8(c0: torch.Tensor, c1: torch.Tensor, shape: tuple[int, ...])
     rows, lh = c0.shape
     n = 2 * rows * lh
     par_all = torch.as_tensor(row_parity(shape) % 2 == 1, device=c0.device)
-    msum = 0
-    esum = 0
+    msum = torch.zeros((), dtype=torch.int64, device=c0.device)
+    esum = torch.zeros((), dtype=torch.int64, device=c0.device)
     for a, b in _chunks(rows, lh):
-        idx = torch.arange(a, b, device=c0.device)
         s = c0[a:b].to(torch.int32)
         o = c1[a:b].to(torch.int32)
-        msum += int(s.sum()) + int(o.sum())
+        msum += s.sum() + o.sum()
         h = o + torch.where(par_all[a:b, None], torch.roll(o, -1, 1), torch.roll(o, 1, 1))
-        for nb in _row_neighbors(idx, shape):
-            h += c1.index_select(0, nb).to(torch.int32)
-        esum += int((s * h).sum(dtype=torch.int64))
-    return msum / n, -esum / n
+        if a == 0 and b == rows:  # whole lattice in one block: rolls, no gathers
+            g = c1.view(shape[:-1] + (lh,))
+            for ax in range(len(shape) - 1):
+                h += (torch.roll(g, 1, ax) + torch.roll(g, -1, ax)).view(rows, lh)
+        else:
+            idx = torch.arange(a, b, device=c0.device)
+            for nb in _row_neighbors(idx, shape):
+                h += c1.index_select(0, nb).to(torch.int32)
+        esum += (s * h).sum(dtype=torch.int64)
+    m, e = torch.stack([msum, esum]).tolist()
+    return m / n, -e / n
 
 
 def popcount64(x: torch.Tensor) -> torch.Tensor:
@@ -82,19 +88,24 @@ def observables_packed(w0: torch.Tensor, w1: torch.Tensor, shape: tuple[int, ...
     rows, nw = w0.shape
     n = rows * nw * 128
     par_all = torch.as_tensor(row_parity(shape) % 2 == 1, device=w0.device)
-    up = 0
-    anti = 0
+    up = torch.zeros((), dtype=torch.int64, device=w0.device)
+    anti = torch.zeros((), dtype=torch.int64, device=w0.device)
     for a, b in _chunks(rows, nw * 8):
-        idx = torch.arange(a, b, device=w0.device)
         s = w0[a:b]
         o = w1[a:b]
-        up += int(popcount64(s).sum()) + int(popcount64(o).sum())
+        up += popcount64(s).sum() + popcount64(o).sum()
         right = _shift_right1(o) | (torch.roll(o, -1, 1) << 63)
         left = (o << 1) | ((torch.roll(o, 1, 1) >> 63) & 1)
         horiz = torch.where(par_all[a:b, None], right, left)
-        anti += int(popcount64(s ^ o).sum()) + int(popcount64(s ^ horiz).sum())
-        for nb in _row_neighbors(idx, shape):
-            anti += int(popcount64(s ^ w1.index_select(0, nb)).sum())
+        anti += popcount64(s ^ o).sum() + popcount64(s ^ horiz).sum()
+        if a == 0 and b == rows:
+            anti += popcount64(s ^ torch.roll(w1, 1, 0)).sum()
+            anti += popcount64(s ^ torch.roll(w1, -1, 0)).sum()
+        else:
+            idx = torch.arange(a, b, device=w0.device)
+            for nb in _row_neighbors(idx, shape):
+                anti += popcount64(s ^ w1.index_select(0, nb)).sum()
+    up, anti = torch.stack([up, anti]).tolist()
     m = (2 * up - n) / n
     bonds = n * len(shape)
     return m, -(bonds - 2 * anti) / n
