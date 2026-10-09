@@ -74,6 +74,7 @@ class TritonInt8(IsingSimulation):
     backend = "triton"
     variant = "int8"
     block = 256
+    force_idx64 = False  # tests exercise the 64-bit index path on small lattices
 
     def _setup(self) -> None:
         self.dev = torch.device("cuda")
@@ -93,7 +94,8 @@ class TritonInt8(IsingSimulation):
         _int8_kernel[grid](self.c[color], self.c[1 - color], self.table_t, self.n_quads,
                            self.t, color, self.k0, self.k1, LH=self.lh, LY=self.ly, LZ=self.lz,
                            NDIM=self.ndim, HEATBATH=self.algorithm == "heatbath",
-                           IDX64=self.rows * self.lh >= 2**31 - 8, BLOCK=self.block,
+                           IDX64=self.force_idx64 or self.rows * self.lh >= 2**31 - 8,
+                           BLOCK=self.block,
                            num_warps=4)
 
     def get_lattice(self) -> np.ndarray:
@@ -105,8 +107,8 @@ class TritonInt8(IsingSimulation):
 
     def _fill_hot(self) -> None:
         g = torch.Generator(device="cuda").manual_seed(self.seed & 0x7FFFFFFFFFFFFFFF)
-        self.c = [(torch.randint(0, 2, (self.rows, self.lh), generator=g, device="cuda",
-                                 dtype=torch.int8) * 2 - 1) for _ in range(2)]
+        self.c = [torch.randint(0, 2, (self.rows, self.lh), generator=g, device="cuda",
+                                dtype=torch.int8).mul_(2).sub_(1) for _ in range(2)]
 
     def synchronize(self) -> None:
         torch.cuda.synchronize()

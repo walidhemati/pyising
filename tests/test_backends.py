@@ -78,3 +78,18 @@ def test_hot_and_cold_starts(key):
     hot = cls(shape, 0.5, init="hot")
     m, e = hot.observables()
     assert abs(m) < 0.05 and abs(e) < 0.05
+
+
+def test_triton_int64_index_path():
+    cls = _cls(("triton", "int8"))
+
+    class Wide(cls):
+        force_idx64 = True
+
+    shape = (32, 64)
+    lat = random_lattice(shape, 2)
+    ref = B.load("numpy", "int8")(shape, 0.4, seed=4, init=lat)
+    sim = Wide(shape, 0.4, seed=4, init=lat)
+    ref.sweep(3)
+    sim.sweep(3)
+    np.testing.assert_array_equal(sim.get_lattice(), ref.get_lattice())

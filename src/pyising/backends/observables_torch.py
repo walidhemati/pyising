@@ -1,6 +1,7 @@
 """On-device magnetisation and energy from compressed (int8) or packed (uint64) colour arrays.
 
-Every bond has exactly one colour-0 end, so ``E = -sum_{i in colour 0} s_i h_i``.
+Every bond has exactly one colour-0 end, so ``E = -sum_{i in colour 0} s_i h_i``. Reductions
+run over blocks of rows, so the extra memory is bounded (~64 MB) even for multi-GB lattices.
 """
 
 from __future__ import annotations
@@ -9,25 +10,45 @@ import torch
 
 from ..lattice import row_parity
 
+CHUNK_ELEMS = 1 << 24
 
-def _neighbor_sum(other: torch.Tensor, shape: tuple[int, ...], color: int) -> torch.Tensor:
-    rows, lh = other.shape
-    par = torch.as_tensor((row_parity(shape) + color) % 2 == 1, device=other.device)[:, None]
-    o = other.to(torch.int32)
-    h = o + torch.where(par, torch.roll(o, -1, 1), torch.roll(o, 1, 1))
-    g = o.view(shape[:-1] + (lh,))
-    for ax in range(len(shape) - 1):
-        h = h + (torch.roll(g, 1, ax) + torch.roll(g, -1, ax)).view(rows, lh)
-    return h
+
+def _row_neighbors(rows: torch.Tensor, shape: tuple[int, ...]) -> list[torch.Tensor]:
+    """Flattened row indices of the +-1 neighbours along every non-x axis."""
+    ly = shape[-2]
+    y = rows % ly
+    out = [rows - y + (y + 1) % ly, rows - y + (y - 1) % ly]
+    if len(shape) == 3:
+        lz = shape[0]
+        z = rows // ly
+        out += [((z + 1) % lz) * ly + y, ((z - 1) % lz) * ly + y]
+    return out
+
+
+def _chunks(n_rows: int, row_len: int):
+    step = max(1, CHUNK_ELEMS // max(1, row_len))
+    for a in range(0, n_rows, step):
+        yield a, min(n_rows, a + step)
 
 
 @torch.no_grad()
 def observables_int8(c0: torch.Tensor, c1: torch.Tensor, shape: tuple[int, ...]):
-    """``(m, e)`` per spin from the two int8 colour arrays."""
-    n = c0.numel() * 2
-    m = (c0.sum(dtype=torch.int64) + c1.sum(dtype=torch.int64)).item() / n
-    e = -(c0.to(torch.int32) * _neighbor_sum(c1, shape, 0)).sum(dtype=torch.int64).item() / n
-    return m, e
+    """``(m, e)`` per spin from the two int8 colour arrays (colour-0 sites own the bonds)."""
+    rows, lh = c0.shape
+    n = 2 * rows * lh
+    par_all = torch.as_tensor(row_parity(shape) % 2 == 1, device=c0.device)
+    msum = 0
+    esum = 0
+    for a, b in _chunks(rows, lh):
+        idx = torch.arange(a, b, device=c0.device)
+        s = c0[a:b].to(torch.int32)
+        o = c1[a:b].to(torch.int32)
+        msum += int(s.sum()) + int(o.sum())
+        h = o + torch.where(par_all[a:b, None], torch.roll(o, -1, 1), torch.roll(o, 1, 1))
+        for nb in _row_neighbors(idx, shape):
+            h += c1.index_select(0, nb).to(torch.int32)
+        esum += int((s * h).sum(dtype=torch.int64))
+    return msum / n, -esum / n
 
 
 def popcount64(x: torch.Tensor) -> torch.Tensor:
@@ -46,17 +67,22 @@ def _shift_right1(o: torch.Tensor) -> torch.Tensor:
 @torch.no_grad()
 def observables_packed(w0: torch.Tensor, w1: torch.Tensor, shape: tuple[int, ...]):
     """``(m, e)`` per spin from packed 2D colour arrays (int64 views of uint64 words)."""
-    n = w0.numel() * 128
-    up = popcount64(w0).sum() + popcount64(w1).sum()
-    m = (2 * up.item() - n) / n
-    o = w1
-    right = _shift_right1(o) | (torch.roll(o, -1, 1) << 63)
-    left = (o << 1) | ((torch.roll(o, 1, 1) >> 63) & 1)
-    par = torch.as_tensor(row_parity(shape) % 2 == 1, device=o.device)[:, None]
-    horiz = torch.where(par, right, left)
+    rows, nw = w0.shape
+    n = rows * nw * 128
+    par_all = torch.as_tensor(row_parity(shape) % 2 == 1, device=w0.device)
+    up = 0
     anti = 0
-    for nb in (o, horiz, torch.roll(o, 1, 0), torch.roll(o, -1, 0)):
-        anti += popcount64(w0 ^ nb).sum().item()
-    bonds = n * 2  # two bonds per spin in 2D
-    e = -(bonds - 2 * anti) / n
-    return m, e
+    for a, b in _chunks(rows, nw * 8):
+        idx = torch.arange(a, b, device=w0.device)
+        s = w0[a:b]
+        o = w1[a:b]
+        up += int(popcount64(s).sum()) + int(popcount64(o).sum())
+        right = _shift_right1(o) | (torch.roll(o, -1, 1) << 63)
+        left = (o << 1) | ((torch.roll(o, 1, 1) >> 63) & 1)
+        horiz = torch.where(par_all[a:b, None], right, left)
+        anti += int(popcount64(s ^ o).sum()) + int(popcount64(s ^ horiz).sum())
+        for nb in _row_neighbors(idx, shape):
+            anti += int(popcount64(s ^ w1.index_select(0, nb)).sum())
+    m = (2 * up - n) / n
+    bonds = n * len(shape)
+    return m, -(bonds - 2 * anti) / n

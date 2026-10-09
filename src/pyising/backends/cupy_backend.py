@@ -28,6 +28,17 @@ def _module(defines: tuple[tuple[str, int], ...]) -> cp.RawModule:
     return cp.RawModule(code=SOURCE, options=opts)
 
 
+_SPLITMIX = r"""
+    unsigned long long z = (unsigned long long)i + seed * 0x9E3779B97F4A7C15ull;
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull;
+    z = (z ^ (z >> 27)) * 0x94D049BB133111EBull;
+    z = z ^ (z >> 31);
+"""
+_hot_int8 = cp.ElementwiseKernel("uint64 seed", "int8 s", _SPLITMIX + "s = (z >> 63) ? 1 : -1;",
+                                 "pyising_hot_int8")
+_hot_u64 = cp.ElementwiseKernel("uint64 seed", "uint64 w", _SPLITMIX + "w = z;", "pyising_hot_u64")
+
+
 def _as_torch(a: cp.ndarray) -> torch.Tensor:
     return torch.from_dlpack(a)
 
@@ -68,9 +79,9 @@ class CupyInt8(IsingSimulation):
         self.c = [cp.asarray(c0), cp.asarray(c1)]
 
     def _fill_hot(self) -> None:
-        rs = cp.random.RandomState(self.seed & 0xFFFFFFFF)
-        self.c = [(rs.randint(0, 2, (self.rows, self.lh), dtype=cp.int8) * 2 - 1).astype(cp.int8)
-                  for _ in range(2)]
+        """i.i.d. spins from a splitmix64 hash of the index, in place (no temporaries)."""
+        for c, arr in enumerate(self.c):
+            _hot_int8(np.uint64(2 * self.seed + c), arr)
 
     def synchronize(self) -> None:
         cp.cuda.Device().synchronize()
@@ -144,10 +155,8 @@ class CupyMultiSpin(IsingSimulation):
                   for _ in range(2)]
 
     def _fill_hot(self) -> None:
-        rs = cp.random.RandomState(self.seed & 0xFFFFFFFF)
-        self.w = [rs.randint(0, 2**63, (self.rows, self.nw), dtype=cp.int64).view(cp.uint64)
-                  ^ (rs.randint(0, 2, (self.rows, self.nw), dtype=cp.int64).view(cp.uint64)
-                     << np.uint64(63)) for _ in range(2)]
+        for c, arr in enumerate(self.w):
+            _hot_u64(np.uint64(2 * self.seed + c), arr)
 
     def synchronize(self) -> None:
         cp.cuda.Device().synchronize()
