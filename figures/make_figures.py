@@ -277,8 +277,7 @@ def write_results_tex(bench: dict, val: dict | None, bench_path: Path) -> None:
                      (("cupy-cuda-c", "msc"), "Lazy"),
                      (("cupy-cuda-c", "int8-rng-per-site"), "PerSite"),
                      (("cupy-cuda-c", "int8"), "CudaInt")):
-        if key in best:
-            m[f"abl{tag}"] = fmt(best[key]["median"])
+        m[f"abl{tag}"] = fmt(best[key]["median"]) if key in best else "n/a"
     if val:
         s = val["summary"]
         m.update({
@@ -312,12 +311,12 @@ def write_results_tex(bench: dict, val: dict | None, bench_path: Path) -> None:
     tab += [r"\bottomrule", r"\end{tabular}"]
     lines.append("\\newcommand{\\perfTable}{" + "\n".join(tab) + "}")
     t3 = [r for r in bench["runs"] if r["dim"] == 3]
-    if t3:
-        b3 = max(t3, key=lambda r: r["median"])
-        lines.append(f"\\newcommand{{\\bestThreeFlips}}{{{fmt(b3['median'])}}}")
-        lines.append(f"\\newcommand{{\\bestThreeBackend}}{{{label(b3)}}}")
-        lines.append(f"\\newcommand{{\\bestThreeL}}{{{b3['size'][0]}}}")
-        lines.append(f"\\newcommand{{\\bestThreePct}}{{{fmt(b3['pct_copy_bw'])}}}")
+    b3 = max(t3, key=lambda r: r["median"]) if t3 else None
+    for k, v in (("bestThreeFlips", fmt(b3["median"]) if b3 else "n/a"),
+                 ("bestThreeBackend", label(b3) if b3 else "n/a"),
+                 ("bestThreeL", str(b3["size"][0]) if b3 else "n/a"),
+                 ("bestThreePct", fmt(b3["pct_copy_bw"]) if b3 else "n/a")):
+        lines.append(f"\\newcommand{{\\{k}}}{{{v}}}")
     (ROOT / "paper" / "results.tex").write_text("\n".join(lines) + "\n")
 
 
@@ -331,6 +330,58 @@ def readme_table(bench: dict) -> str:
         out.append(f"| {LABEL[r['backend']]} | {r['variant']} | {r['size'][0]} | "
                    f"{r['median']:.2f} | {r['effective_GBs']:.1f} | {r['pct_copy_bw']:.1f} |")
     return "\n".join(out)
+
+
+def _replace_block(text: str, tag: str, body: str) -> str:
+    start, end = f"<!-- {tag}:start -->", f"<!-- {tag}:end -->"
+    i, j = text.index(start) + len(start), text.index(end)
+    return text[:i] + "\n" + body.strip() + "\n" + text[j:]
+
+
+def update_readme(bench: dict, val: dict | None, bench_path: Path) -> None:
+    """Fill the README's generated blocks (headline, table, validation) from the JSON."""
+    readme = ROOT / "README.md"
+    if not readme.exists():
+        return
+    best = best_per_variant(runs_2d_metro(bench))
+    top = max(best.values(), key=lambda r: r["median"])
+    top_py = max((r for r in best.values() if r["backend"] != "cupy-cuda-c"),
+                 key=lambda r: r["median"])
+    c = bench["ceiling"]
+    prov = ("\n> **PROVISIONAL**: development run on a shared GPU "
+            f"(`results/{bench_path.name}`); final numbers come from `bench/run.py --full`.\n"
+            if bench.get("provisional") else "")
+    head = (f"{prov}\n| | |\n|---|---|\n"
+            f"| **Fastest variant** | {label(top)}, L = {top['size'][0]} |\n"
+            f"| **Throughput** | **{top['median']:.1f} spin flips / ns** (2D Metropolis, T = T_c) |\n"
+            f"| **% of ceiling** | {top['pct_copy_bw']:.1f} % of measured copy bandwidth "
+            f"({c['copy_bandwidth_GBs']:.0f} GB/s), {top['pct_spec_bw']:.1f} % of nominal "
+            f"({c['spec_bandwidth_GBs']:.0f} GB/s), at {top['bytes_per_unit']} B/update |\n"
+            f"| **Fastest pure-Python-DSL kernel** | {label(top_py)}: {top_py['median']:.1f} "
+            f"flips/ns ({top_py['pct_copy_bw']:.1f} % of copy BW) |\n"
+            f"| **GPU** | {bench['machine']['gpu']} (single laptop GPU) |\n")
+    text = readme.read_text()
+    text = _replace_block(text, "headline", head)
+    text = _replace_block(text, "table", f"Source: `results/{bench_path.name}`.\n\n"
+                          + readme_table(bench))
+    if val:
+        s = val["summary"]
+        vb = ("| check | result |\n|---|---|\n"
+              f"| bitwise identity across backends | {s['n_identity_checks']} checks, "
+              f"{'all identical' if s['all_identical'] else 'NOT all identical'} |\n"
+              f"| 2D energy vs exact finite torus | max abs error {s['e_max_abs_err_vs_exact_L']:.1e}, "
+              f"max {s['e_max_abs_z']:.2f} sigma |\n"
+              f"| 2D abs(m) vs Onsager-Yang (T < T_c - 0.2) | max abs error "
+              f"{s['m_max_abs_err_vs_yang_away_from_Tc']:.1e} |\n"
+              f"| 2D T_c from Binder crossing | {s['Tc2d_estimate']:.4f} "
+              f"({100 * s['Tc2d_rel_error']:.2f} % from Onsager) |\n"
+              f"| 3D T_c from Binder crossing | {s['Tc3d_estimate']:.4f} "
+              f"({100 * s['Tc3d_rel_error']:.2f} % from Ferrenberg et al. 2018) |\n"
+              f"| 3D GPU vs Wolff energies | max {s['e3d_max_abs_z_vs_wolff']:.2f} sigma |\n")
+        if val.get("quick"):
+            vb = "> quick validation run (small lattices)\n\n" + vb
+        text = _replace_block(text, "validation", vb)
+    readme.write_text(text)
 
 
 def main() -> None:
@@ -354,7 +405,7 @@ def main() -> None:
         fig_validation(val)
         fig_binder(val)
     write_results_tex(bench, val, bp)
-    (ROOT / "results" / "table.md").write_text(readme_table(bench) + "\n")
+    update_readme(bench, val, bp)
     print(f"figures from {bp.name}" + (f" + {vp.name}" if val else "") +
           f"; provisional={bench.get('provisional')}")
 
