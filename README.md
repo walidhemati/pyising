@@ -18,14 +18,14 @@ seven backends, bit-identical results, and a roofline for every rung.**
 ## Headline result
 
 <!-- headline:start -->
-> **PROVISIONAL**: development run on a shared GPU (`results/dev-quick.json`); final numbers come from `bench/run.py --full`.
+> **PROVISIONAL**: development run on a shared GPU (`results/provisional.json`); final numbers come from `bench/run.py --full`.
 
 | | |
 |---|---|
-| **Fastest variant** | Triton (msc), L = 8192 |
-| **Throughput** | **192.6 spin flips / ns** (2D Metropolis, T = T_c) |
-| **% of ceiling** | 20.4 % of measured copy bandwidth (354 GB/s), 16.1 % of nominal (448 GB/s), at 0.375 B/update |
-| **Fastest pure-Python-DSL kernel** | Triton (msc): 192.6 flips/ns (20.4 % of copy BW) |
+| **Fastest variant** | CUDA C (CuPy) (msc), L = 16384 |
+| **Throughput** | **326.8 spin flips / ns** (2D Metropolis, T = T_c) |
+| **% of ceiling** | 33.9 % of measured copy bandwidth (361 GB/s), 27.4 % of nominal (448 GB/s), at 0.375 B/update |
+| **Fastest pure-Python-DSL kernel** | Warp (msc): 280.4 flips/ns (29.1 % of copy BW) |
 | **GPU** | NVIDIA GeForce RTX 3070 Laptop GPU (single laptop GPU) |
 <!-- headline:end -->
 
@@ -82,16 +82,14 @@ K_c = 0.221654626(5) of Ferrenberg, Xu & Landau (3D Binder crossing), and Wolff 
 simulations (3D energies). Summary from `results/validation.json`:
 
 <!-- validation:start -->
-> quick validation run (small lattices)
-
 | check | result |
 |---|---|
 | bitwise identity across backends | 33 checks, all identical |
-| 2D energy vs exact finite torus | max abs error 2.1e-02, max 7.87 sigma |
-| 2D abs(m) vs Onsager-Yang (T < T_c - 0.2) | max abs error 2.9e-04 |
-| 2D T_c from Binder crossing | 2.2288 (1.78 % from Onsager) |
-| 3D T_c from Binder crossing | 4.4705 (0.91 % from Ferrenberg et al. 2018) |
-| 3D GPU vs Wolff energies | max 1.06 sigma |
+| 2D energy vs exact finite torus | max abs error 4.3e-03, max 3.29 sigma |
+| 2D abs(m) vs Onsager-Yang (T < T_c - 0.2) | max abs error 3.8e-04 |
+| 2D T_c from Binder crossing | 2.2712 (0.09 % from Onsager) |
+| 3D T_c from Binder crossing | 4.5102 (0.03 % from Ferrenberg et al. 2018) |
+| 3D GPU vs Wolff energies | max 1.19 sigma |
 <!-- validation:end -->
 
 ## Performance
@@ -101,18 +99,24 @@ simulations (3D energies). Summary from `results/validation.json`:
 ![scaling](figures/scaling.png)
 
 <!-- table:start -->
-Source: `results/dev-quick.json`.
+Source: `results/provisional.json`.
 
 | backend | variant | L | flips/ns | eff. GB/s | % of copy BW |
 |---|---|---:|---:|---:|---:|
-| NumPy | int8 | 256 | 0.06 | 0.2 | 0.1 |
-| torch eager | int8 | 1024 | 0.16 | 0.5 | 0.1 |
-| torch.compile | int8 | 1024 | 1.08 | 3.2 | 0.9 |
-| Triton | int8 | 4096 | 35.42 | 106.2 | 30.0 |
-| CUDA C (CuPy) | int8 | 1024 | 46.48 | 139.4 | 39.4 |
-| Triton | msc | 8192 | 192.57 | 72.2 | 20.4 |
-| CUDA C (CuPy) | msc | 8192 | 150.30 | 56.4 | 15.9 |
-| CUDA C (CuPy) | msc-eager32 | 8192 | 76.74 | 28.8 | 8.1 |
+| NumPy | int8 | 1024 | 0.04 | 0.1 | 0.0 |
+| torch eager | int8 | 1024 | 0.21 | 0.6 | 0.2 |
+| torch.compile | int8 | 4096 | 2.42 | 7.2 | 2.0 |
+| Triton | int8 | 1024 | 23.97 | 71.9 | 19.9 |
+| Warp | int8 | 2048 | 17.66 | 53.0 | 14.7 |
+| Numba-CUDA | int8 | 2048 | 19.46 | 58.4 | 16.2 |
+| CUDA C (CuPy) | int8 | 16384 | 37.55 | 112.7 | 31.2 |
+| CUDA C (CuPy) | int8-rng-per-site | 4096 | 25.05 | 75.1 | 20.8 |
+| NumPy | msc | 1024 | 0.12 | 0.1 | 0.0 |
+| Triton | msc | 32768 | 176.02 | 66.0 | 18.3 |
+| Warp | msc | 16384 | 280.37 | 105.1 | 29.1 |
+| Numba-CUDA | msc | 8192 | 248.23 | 93.1 | 25.8 |
+| CUDA C (CuPy) | msc | 16384 | 326.76 | 122.5 | 33.9 |
+| CUDA C (CuPy) | msc-eager32 | 16384 | 160.06 | 60.0 | 16.6 |
 <!-- table:end -->
 
 ## How it works
