@@ -213,8 +213,6 @@ class WarpInt8(_WarpBase):
     def _setup(self) -> None:
         self.ly = self.shape[-2]
         self.lz = self.shape[0] if self.ndim == 3 else 1
-        ones = np.ones(self.rows * self.lh, np.int8).view(np.uint32)
-        self.c = [wp.array(ones, dtype=wp.uint32, device="cuda:0") for _ in range(2)]
         self.k0, self.k1 = split_seed(self.seed)
         self._upload_table()
 
@@ -257,8 +255,6 @@ class WarpMultiSpin(_WarpBase):
 
     def _setup(self) -> None:
         self.nw = self.lh // 64
-        self.w = [wp.zeros(self.rows * self.nw, dtype=wp.uint64, device="cuda:0")
-                  for _ in range(2)]
         self.k0, self.k1 = split_seed(self.seed)
 
     def _half_sweep(self, color: int) -> None:

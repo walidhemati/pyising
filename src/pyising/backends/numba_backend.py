@@ -189,8 +189,6 @@ class NumbaInt8(_NumbaBase):
         self.lz = self.shape[0] if self.ndim == 3 else 1
         self.kernel = _int8_kernel(self.lh, self.ly, self.lz, self.ndim,
                                    self.algorithm == "heatbath")
-        self.c = [cuda.to_device(np.ones(self.rows * self.lh, np.int8).view(np.uint32))
-                  for _ in range(2)]
         self.k0, self.k1 = split_seed(self.seed)
         self.n_quads = self.rows * self.lh // 4
         self._upload_table()
@@ -235,7 +233,6 @@ class NumbaMultiSpin(_NumbaBase):
     def _setup(self) -> None:
         self.nw = self.lh // 64
         self.kernel = _msc_kernel(self.nw, self.shape[0])
-        self.w = [cuda.to_device(np.zeros(self.rows * self.nw, np.uint64)) for _ in range(2)]
         self.k0, self.k1 = split_seed(self.seed)
         self.n_words = self.rows * self.nw
 

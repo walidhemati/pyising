@@ -92,7 +92,11 @@ class IsingSimulation(ABC):
     # ---- hooks -------------------------------------------------------------------------------
     @abstractmethod
     def _setup(self) -> None:
-        """Allocate device state and upload the acceptance table."""
+        """Prepare kernels and upload the acceptance table.
+
+        The spin arrays are allocated by the init path (``set_lattice``, ``_fill_cold`` or
+        ``_fill_hot``), so a multi-GB lattice is never held twice.
+        """
 
     @abstractmethod
     def _half_sweep(self, color: int) -> None:

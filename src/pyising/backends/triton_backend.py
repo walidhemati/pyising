@@ -78,8 +78,6 @@ class TritonInt8(IsingSimulation):
 
     def _setup(self) -> None:
         self.dev = torch.device("cuda")
-        self.c = [torch.ones((self.rows, self.lh), dtype=torch.int8, device=self.dev)
-                  for _ in range(2)]
         self.k0, self.k1 = split_seed(self.seed)
         self.n_quads = self.rows * self.lh // 4
         self.ly = self.shape[-2]
@@ -197,8 +195,6 @@ class TritonMultiSpin(TritonInt8):
         self.dev = torch.device("cuda")
         self.nw = self.lh // 64
         self.n_words = self.rows * self.nw
-        self.w = [torch.zeros((self.rows, self.nw), dtype=torch.uint64, device=self.dev)
-                  for _ in range(2)]
         self.k0, self.k1 = split_seed(self.seed)
 
     def _upload_table(self) -> None:
