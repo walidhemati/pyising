@@ -77,3 +77,62 @@ CUDA C (CuPy) & msc-eager32 & 4096 & 211.81 & 79.4 & 22.0 \\
 \newcommand{\bestThreeBackend}{CUDA C (CuPy)}
 \newcommand{\bestThreeL}{256}
 \newcommand{\bestThreePct}{64.2}
+% head-to-head macros from results/counterparts.json
+\newcommand{\cpAvailable}{true}
+\newcommand{\cpProvisional}{true}
+\newcommand{\cpMode}{quick}
+\newcommand{\cpCommit}{935796d}
+\newcommand{\cpRomeroBasicCudaFlips}{21.4}
+\newcommand{\cpRomeroBasicCudaL}{4096}
+\newcommand{\cpRomeroBasicPyFlips}{3.0}
+\newcommand{\cpRomeroBasicPyL}{4096}
+\newcommand{\cpRomeroTensorFlips}{11.1}
+\newcommand{\cpRomeroTensorL}{4096}
+\newcommand{\cpRomeroOldFlips}{169.2}
+\newcommand{\cpRomeroOldL}{4096}
+\newcommand{\cpRomeroOptFlips}{201.3}
+\newcommand{\cpRomeroOptL}{4096}
+\newcommand{\cpOursIntFlips}{63.1}
+\newcommand{\cpOursIntL}{4096}
+\newcommand{\cpOursIntBackend}{CUDA C (CuPy)}
+\newcommand{\cpOursPyIntFlips}{46.9}
+\newcommand{\cpOursPyIntL}{4096}
+\newcommand{\cpOursPyIntBackend}{Triton}
+\newcommand{\cpOursMscFlips}{364.8}
+\newcommand{\cpOursMscL}{4096}
+\newcommand{\cpOursMscBackend}{CUDA C (CuPy)}
+\newcommand{\cpOursPyMscFlips}{300.8}
+\newcommand{\cpOursPyMscL}{4096}
+\newcommand{\cpOursPyMscBackend}{Warp}
+\newcommand{\cpRatioOpt}{1.81}
+\newcommand{\cpRatioPyOpt}{1.49}
+\newcommand{\cpRatioOld}{2.16}
+\newcommand{\cpRatioBasic}{2.95}
+\newcommand{\cpRatioPyBasic}{15.49}
+\newcommand{\cpOptCompare}{faster than}
+\newcommand{\cpPyOptCompare}{faster than}
+\newcommand{\cpOldCompare}{faster than}
+\newcommand{\cpEnergyL}{4096}
+\newcommand{\cpEnergySweeps}{200}
+\newcommand{\cpEnergyTheirs}{-1.3826}
+\newcommand{\cpEnergyOurs}{-1.3832}
+\newcommand{\cpEnergyMaxZ}{0.8}
+\newcommand{\cpBasicIdentical}{identical}
+\newcommand{\cpPctCopyOpt}{20.9}
+\newcommand{\cpPctCopyOld}{70.3}
+\newcommand{\cpTable}{\begin{tabular}{llrrrr}
+\toprule
+code & variant & bits/spin & $L$ & flips/ns & \% copy \\
+\midrule
+ising-gpu & basic\_cuda & 8 & 4096 & 21.4 & 17.8 \\
+ising-gpu & basic\_python & 8 & 4096 & 3.0 & 2.5 \\
+ising-gpu & tensorcore & 16 & 4096 & 11.1 & 18.5 \\
+ising-gpu & optimized\_old & 4 & 4096 & 169.2 & 70.3 \\
+ising-gpu & cuIsingModel & 1 & 4096 & 201.3 & 20.9 \\
+\midrule
+pyising & Triton (int8) & 8 & 4096 & 46.9 & 39.0 \\
+pyising & CUDA C (CuPy) (int8) & 8 & 4096 & 63.1 & 52.5 \\
+pyising & Warp (msc) & 1 & 4096 & 300.8 & 31.3 \\
+pyising & CUDA C (CuPy) (msc) & 1 & 4096 & 364.8 & 37.9 \\
+\bottomrule
+\end{tabular}}

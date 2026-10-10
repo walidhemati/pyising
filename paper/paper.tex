@@ -21,7 +21,7 @@
     \textbf{\textcolor{red!70!black}{PROVISIONAL NUMBERS}}\\[2pt]\small
     Performance numbers come from a development run (\texttt{\benchFile}, mode \texttt{\benchMode})
     on a GPU shared with other jobs. They are not publishable; the final numbers come from
-    \texttt{bench/run.py --full} on an idle GPU.}}\end{center}}{}}
+    \texttt{bench/run.py -{}-full} on an idle GPU.}}\end{center}}{}}
 
 \title{Billions of spin flips per second from Python:\\
 a roofline study of GPU Ising Monte Carlo}
@@ -303,7 +303,81 @@ our laptop part, using 4-bit spins and one 32-bit uniform per spin; \citet{Block
 absolute rate on a part with half the nominal bandwidth. The gain is algorithmic (1 instead of
 4 bits per spin, \bitsPerSpinWarp{} instead of 32 random bits per spin), not a property of the
 host language, and it is a single-device statement on different hardware generations, not a
-claim to exceed their throughput or their multi-GPU aggregates.
+claim to exceed their throughput or their multi-GPU aggregates (but see
+\cref{sec:headtohead}).
+
+\subsection{Head-to-head with the reference CUDA implementation}
+\label{sec:headtohead}
+
+To compare on equal hardware we built and ran NVIDIA's reference code \citep{IsingGPURepo}
+(commit \texttt{\cpCommit}) on our GPU. It contains five single-GPU programs for 2D
+checkerboard Metropolis: a basic CUDA~C and a basic
+Python version (Numba kernels, CuPy cuRAND uniforms), a tensor-core version and the optimised
+4-bit multi-spin code of \citet{Romero2020}, and the current 1-bit code (\texttt{cuIsingModel})
+of \citet{Bisson2025}, which draws its acceptance bits from a 16-entry lookup table (four
+random bits per 32-bit draw). We compiled them with \texttt{nvcc} 13.4 for \texttt{sm\_86} and
+did not change their sources or algorithms. The only patches are build flags: the target
+architecture, C++17 for the CUB shipped with CUDA~13, and a force-included header that restores
+two runtime-API overloads removed in CUDA~13 (for the tensor-core program it also provides the
+half-to-double CUB sum used for the final magnetisation, outside the timed loop). The basic
+Python script runs unchanged, with \texttt{cupy.cuda.curand} aliased to its current module.
+\texttt{bench/counterparts.py} builds everything, runs both codes on the same lattices at
+$T=T_c$, hot start, $J=1$, periodic boundaries, and records the commit and every patch in
+\texttt{results/counterparts.json}.
+
+Both codes report the same metric: $L^2$ times the number of sweeps divided by the time, where a
+sweep updates both colours once. We parse the rate each program prints, so their timed regions
+stay as written (host clock or CUDA events around the update loop; the basic codes include the
+cuRAND call that fills one uniform per site). Each configuration runs once to size the sweep count, then
+five times (median reported). As a check that both simulate the same model, the
+energy per spin after \cpEnergySweeps{} sweeps from a hot start on $L=\cpEnergyL$ (three seeds
+each) is $\cpEnergyTheirs$ for \texttt{cuIsingModel} and $\cpEnergyOurs$ for our packed CUDA~C
+kernel, within \cpEnergyMaxZ{} standard errors. The basic CUDA and basic Python programs share
+the cuRAND stream and give \cpBasicIdentical{} magnetisations.
+
+\ifthenelse{\equal{\cpProvisional}{true}}{\noindent\textbf{\textcolor{red!70!black}{Provisional:}}
+the numbers in this subsection come from a short run on a shared GPU (mode
+\texttt{\cpMode} of \texttt{bench/counterparts.py}); the final numbers come from its
+\texttt{-{}-full} mode on an idle GPU.\par}{}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{../figures/counterparts.pdf}
+\caption{Same-GPU head-to-head, 2D Metropolis at $T_c$: best median over lattice sizes of
+the NVIDIA/ising-gpu programs (black, grey) and of pyising (colours). Dashed: copy-bandwidth
+ceilings for 8-, 4- and 1-bit spins under the minimal traffic model.}
+\label{fig:counterparts}
+\end{figure}
+
+
+\paragraph{Byte-per-spin codes.} Basic CUDA~C reaches \cpRomeroBasicCudaFlips{}
+flips/ns ($L=\cpRomeroBasicCudaL$); our best int8 kernel (\cpOursIntBackend) reaches
+\cpOursIntFlips{} flips/ns, \cpRatioBasic$\times$ as much. Their program writes a 4-byte uniform per site to
+DRAM and reads it back; ours draws random numbers inside the update kernel. The basic Python
+program reaches \cpRomeroBasicPyFlips{} flips/ns; our best Python-DSL int8 kernel
+(\cpOursPyIntBackend) reaches \cpOursPyIntFlips{} (\cpRatioPyBasic$\times$). Its Numba kernel
+computes the acceptance probability in double precision (Python floats are 64-bit; checked in
+the PTX), which a GeForce GPU executes at 1/64 of the FP32 rate (the V100 of the original paper:
+1/2). The slowdown comes from FP64 arithmetic on a consumer GPU, not from Python itself. The
+tensor-core program reaches \cpRomeroTensorFlips{} flips/ns.
+
+\paragraph{Multi-spin codes.} The 4-bit code of \citet{Romero2020} reaches
+\cpRomeroOldFlips{} flips/ns ($L=\cpRomeroOldL$, \cpPctCopyOld\,\% of copy bandwidth at
+1.5\,B/update), and the 1-bit \texttt{cuIsingModel} reaches \cpRomeroOptFlips{} flips/ns
+($L=\cpRomeroOptL$, \cpPctCopyOpt\,\% of copy bandwidth). On this GPU our best packed kernel
+(\cpOursMscBackend, \cpOursMscFlips{} flips/ns at $L=\cpOursMscL$) is \cpOptCompare{} the 1-bit
+reference (ratio \cpRatioOpt) and \cpOldCompare{} the 4-bit one (ratio \cpRatioOld). The best
+kernel written in a Python DSL (\cpOursPyMscBackend, \cpOursPyMscFlips{} flips/ns) is
+\cpPyOptCompare{} the 1-bit reference (ratio \cpRatioPyOpt). None of the packed codes reaches its
+memory ceiling, so the difference lies in the work per spin. The 4-bit code moves four times
+the bytes and draws one 32-bit uniform per spin. \texttt{cuIsingModel}
+draws two 4-bit table lookups per four spins (16 random bits per spin) at every temperature.
+Our lazy comparison draws \bitsPerSpinWarp{} bits per spin, counted at the slowest thread of
+each warp at $T_c$. \texttt{cuIsingModel} also synchronises with the host after every
+half-sweep, which costs most on small lattices. We have not profiled their kernels on this GPU and do not
+attribute the whole gap to the random numbers; their kernel parameters were tuned on
+other GPUs, so the ranking holds for this laptop GPU only and says nothing about their
+multi-GPU results.
 
 \section{Discussion}
 
@@ -331,9 +405,11 @@ kernel written entirely in a Python DSL) by spending effort where the roofline s
 
 \section*{Code availability}
 Code, benchmark JSON, figure scripts and this paper: \url{https://github.com/walidhemati/pyising}
-(MIT licence). \texttt{bench/run.py --full}, \texttt{figures/make\_figures.py} and
-\texttt{tectonic paper/paper.tex} regenerate every number and figure.
+(MIT licence). \texttt{bench/run.py -{}-full}, \texttt{bench/counterparts.py -{}-full},
+\texttt{figures/make\_figures.py} and \texttt{tectonic paper/paper.tex} regenerate every number
+and figure.
 
+\setlength{\bibsep}{2pt plus 1pt}
 \bibliographystyle{unsrtnat}
 \bibliography{references}
 

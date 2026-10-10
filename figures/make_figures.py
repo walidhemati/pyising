@@ -226,12 +226,205 @@ def fig_binder(val: dict) -> None:
     save(fig, "binder")
 
 
+# ------------------------------------------------------------------------- counterparts --
+#: NVIDIA/ising-gpu programs (Romero et al. 2020; Bisson et al. 2025): label, bits/spin, colour.
+CP_META = {
+    "basic_cuda": ("ising-gpu basic CUDA", 8, "black"),
+    "basic_python": ("ising-gpu basic Python", 8, "0.45"),
+    "tensorcore": ("ising-gpu tensor core", 16, "0.65"),
+    "optimized_old": ("ising-gpu optimised, 4 bit", 4, "0.5"),
+    "cuIsingModel": ("ising-gpu cuIsingModel, 1 bit", 1, "black"),
+}
+CP_TAG = {"basic_cuda": "BasicCuda", "basic_python": "BasicPy", "tensorcore": "Tensor",
+          "optimized_old": "Old", "cuIsingModel": "Opt"}
+DSL = ("triton", "warp", "numba")
+
+
+def load_counterparts() -> dict | None:
+    p = ROOT / "results" / "counterparts.json"
+    return json.loads(p.read_text()) if p.exists() else None
+
+
+def _cp_best(cp: dict) -> tuple[dict, dict]:
+    """Best median per counterpart program and per pyising backend/layout."""
+    theirs: dict[str, dict] = {}
+    ours: dict[tuple[str, str], dict] = {}
+    for r in cp["runs"]:
+        if r["code"] == "pyising":
+            k = (r["backend"], r["layout"])
+            if k not in ours or r["median"] > ours[k]["median"]:
+                ours[k] = r
+        elif r["variant"] not in theirs or r["median"] > theirs[r["variant"]]["median"]:
+            theirs[r["variant"]] = r
+    return theirs, ours
+
+
+def fig_counterparts(cp: dict, bench: dict) -> None:
+    """Best flips/ns per program: NVIDIA/ising-gpu (black/grey) against pyising (colours)."""
+    bw = bench["ceiling"]["copy_bandwidth_GBs"]
+    theirs, ours = _cp_best(cp)
+    fig, axes = plt.subplots(1, 2, figsize=(FULL, 2.4))
+    panels = ((axes[0], "int8", ("basic_cuda", "basic_python", "tensorcore"), (8,),
+               "byte-per-spin codes"),
+              (axes[1], "msc", ("optimized_old", "cuIsingModel"), (4, 1), "multi-spin coding"))
+    for ax, layout, names, bits, title in panels:
+        rows = [(CP_META[n][0], theirs[n], CP_META[n][2]) for n in names if n in theirs]
+        rows += [(f"pyising {LABEL[b]}", r, COLORS[b])
+                 for (b, v), r in sorted(ours.items(), key=lambda kv: ORDER.index(kv[0][0]))
+                 if v == layout]
+        if not rows:
+            ax.set_axis_off()
+            continue
+        y = np.arange(len(rows))[::-1]
+        ax.barh(y, [r["median"] for _, r, _ in rows], color=[c for _, _, c in rows],
+                height=0.62)
+        for yi, (_, r, _) in zip(y, rows, strict=True):
+            ax.text(r["median"] * 1.04, yi, f"{r['median']:.1f}", va="center", fontsize=6.5,
+                    color="0.15", zorder=3, bbox={"fc": "white", "ec": "none", "pad": 0.4})
+        ax.set_yticks(y, [lab for lab, _, _ in rows], fontsize=7)
+        ceils = [bw / (3 * b / 8) for b in bits]
+        for b, c in zip(bits, ceils, strict=True):
+            ax.axvline(c, **CEIL_STYLE)
+            ax.text(c, len(rows) - 0.45, f"{b}-bit spins\ncopy BW: {c:.0f}", fontsize=6,
+                    ha="center", va="bottom", color="0.25")
+        lo = min(r["median"] for _, r, _ in rows)
+        ax.set_xscale("log")
+        ax.set_xlim(lo / 2.5, max(ceils) * 2.2)
+        ax.set_ylim(-0.7, len(rows) - 0.45)
+        ax.set_xlabel("flips / ns (median at best size)")
+        ax.set_title(title, fontsize=9, pad=18)
+    if cp.get("provisional"):
+        fig.suptitle("PROVISIONAL (shared-GPU quick run)", fontsize=8, color="#b00000")
+    fig.tight_layout()
+    save(fig, "counterparts")
+
+
+def _ratio(a: dict | None, b: dict | None) -> str:
+    return fmt(a["median"] / b["median"], 2) if a and b else "n/a"
+
+
+def _compare(a: dict | None, b: dict | None) -> str:
+    if not (a and b):
+        return "n/a"
+    q = a["median"] / b["median"]
+    return "on par with" if abs(q - 1) < 0.05 else ("faster than" if q > 1 else "slower than")
+
+
+def cp_macros(cp: dict | None, bench: dict) -> list[str]:
+    """LaTeX macros for the head-to-head subsection (n/a if no counterparts JSON)."""
+    m: dict[str, str] = {"cpAvailable": "false", "cpProvisional": "true", "cpMode": "n/a",
+                         "cpCommit": "n/a"}
+    keys = [f"cpRomero{t}{s}" for t in CP_TAG.values() for s in ("Flips", "L")]
+    keys += [f"cpOurs{t}{s}" for t in ("Int", "PyInt", "Msc", "PyMsc")
+             for s in ("Flips", "L", "Backend")]
+    keys += ["cpRatioOpt", "cpRatioPyOpt", "cpRatioOld", "cpRatioBasic", "cpRatioPyBasic",
+             "cpOptCompare", "cpPyOptCompare", "cpOldCompare", "cpEnergyL", "cpEnergySweeps",
+             "cpEnergyTheirs", "cpEnergyOurs", "cpEnergyMaxZ", "cpBasicIdentical",
+             "cpPctCopyOpt", "cpPctCopyOld"]
+    m.update({k: "n/a" for k in keys})
+    m["cpTable"] = "n/a"
+    if cp:
+        theirs, ours = _cp_best(cp)
+        bw = bench["ceiling"]["copy_bandwidth_GBs"]
+        m.update({"cpAvailable": "true",
+                  "cpProvisional": "true" if cp.get("provisional") else "false",
+                  "cpMode": cp.get("mode", "?"), "cpCommit": cp["counterpart"]["commit"][:7]})
+        for name, tag in CP_TAG.items():
+            if name in theirs:
+                m[f"cpRomero{tag}Flips"] = fmt(theirs[name]["median"])
+                m[f"cpRomero{tag}L"] = str(theirs[name]["L"])
+
+        def top(layout: str, backends: tuple[str, ...] | None) -> dict | None:
+            rs = [r for (b, v), r in ours.items() if v == layout
+                  and (backends is None or b in backends)]
+            return max(rs, key=lambda r: r["median"]) if rs else None
+
+        sel = {"Int": top("int8", None), "PyInt": top("int8", DSL), "Msc": top("msc", None),
+               "PyMsc": top("msc", DSL)}
+        for tag, r in sel.items():
+            if r:
+                m[f"cpOurs{tag}Flips"] = fmt(r["median"])
+                m[f"cpOurs{tag}L"] = str(r["L"])
+                m[f"cpOurs{tag}Backend"] = LABEL[r["backend"]]
+        opt, old = theirs.get("cuIsingModel"), theirs.get("optimized_old")
+        m.update({
+            "cpRatioOpt": _ratio(sel["Msc"], opt), "cpRatioPyOpt": _ratio(sel["PyMsc"], opt),
+            "cpRatioOld": _ratio(sel["Msc"], old),
+            "cpRatioBasic": _ratio(sel["Int"], theirs.get("basic_cuda")),
+            "cpRatioPyBasic": _ratio(sel["PyInt"], theirs.get("basic_python")),
+            "cpOptCompare": _compare(sel["Msc"], opt),
+            "cpPyOptCompare": _compare(sel["PyMsc"], opt),
+            "cpOldCompare": _compare(sel["Msc"], old),
+        })
+        for name, tag in (("cuIsingModel", "Opt"), ("optimized_old", "Old")):
+            if name in theirs:
+                r = theirs[name]
+                m[f"cpPctCopy{tag}"] = fmt(100 * r["median"] * 3 * r["spin_bits"] / 8 / bw)
+        ck = cp.get("checks", {})
+        er = ck.get("energy_relaxation")
+        if er:
+            ms = er["mean_std"]
+            m["cpEnergyL"] = str(er["L"])
+            m["cpEnergySweeps"] = str(er["sweeps"])
+            m["cpEnergyTheirs"] = fmt(ms["NVIDIA/ising-gpu cuIsingModel"][0], 4)
+            if "pyising cupy-cuda-c/msc" in ms:
+                m["cpEnergyOurs"] = fmt(ms["pyising cupy-cuda-c/msc"][0], 4)
+            m["cpEnergyMaxZ"] = fmt(max(abs(z) for z in er["z_vs_cuIsingModel"].values()), 1)
+        ic = ck.get("basic_cuda_vs_basic_python")
+        if ic:
+            m["cpBasicIdentical"] = "identical" if ic["identical_to_printed_digits"] \
+                else "different"
+        tab = [r"\begin{tabular}{llrrrr}", r"\toprule",
+               r"code & variant & bits/spin & $L$ & flips/ns & \% copy \\", r"\midrule"]
+        for name, r in sorted(theirs.items(), key=lambda kv: list(CP_TAG).index(kv[0])):
+            pct = 100 * r["median"] * 3 * r["spin_bits"] / 8 / bw
+            tex_name = name.replace("_", r"\_")
+            tab.append(f"ising-gpu & {tex_name} & {r['spin_bits']:g} & "
+                       f"{r['L']} & {r['median']:.1f} & {pct:.1f} \\\\")
+        tab.append(r"\midrule")
+        for (b, v), r in sorted(ours.items(), key=lambda kv: (kv[0][1] != "int8",
+                                                             ORDER.index(kv[0][0]))):
+            pct = 100 * r["median"] * 3 * r["spin_bits"] / 8 / bw
+            tab.append(f"pyising & {LABEL[b]} ({v}) & {r['spin_bits']:g} & {r['L']} & "
+                       f"{r['median']:.1f} & {pct:.1f} \\\\")
+        tab += [r"\bottomrule", r"\end{tabular}"]
+        m["cpTable"] = "\n".join(tab)
+    src = "results/counterparts.json" if cp else "no results/counterparts.json"
+    return [f"% head-to-head macros from {src}"] + [
+        f"\\newcommand{{\\{k}}}{{{v}}}" for k, v in m.items()]
+
+
+def readme_counterparts(cp: dict) -> str:
+    theirs, ours = _cp_best(cp)
+    opt, old = theirs.get("cuIsingModel"), theirs.get("optimized_old")
+    msc = max((r for (b, v), r in ours.items() if v == "msc"), key=lambda r: r["median"],
+              default=None)
+    if not (opt and msc):
+        return "Head-to-head: incomplete run, see `results/counterparts.json`."
+    prov = ("**PROVISIONAL** (shared-GPU quick run, `bench/counterparts.py --quick`): "
+            if cp.get("provisional") else "Measured ")
+    line = (f"{prov}on the same GPU at T = T_c, NVIDIA's reference code "
+            f"([NVIDIA/ising-gpu](https://github.com/NVIDIA/ising-gpu) @ "
+            f"`{cp['counterpart']['commit'][:7]}`) reaches {opt['median']:.1f} flips/ns with "
+            f"its 1-bit `cuIsingModel` (Bisson et al. 2025, L = {opt['L']})")
+    if old:
+        line += (f" and {old['median']:.1f} with the 4-bit code of Romero et al. 2020 "
+                 f"(L = {old['L']})")
+    line += (f"; pyising's best packed kernel ({LABEL[msc['backend']]}) reaches "
+             f"{msc['median']:.1f} flips/ns (L = {msc['L']}), "
+             f"{msc['median'] / opt['median']:.2f}x the 1-bit reference. "
+             "Details: `bench/counterparts.py`, `results/counterparts.json`, "
+             "`figures/counterparts.png`.")
+    return line
+
+
 # ------------------------------------------------------------------------------ results.tex --
 def fmt(x: float, nd: int = 1) -> str:
     return f"{x:.{nd}f}"
 
 
-def write_results_tex(bench: dict, val: dict | None, bench_path: Path) -> None:
+def write_results_tex(bench: dict, val: dict | None, bench_path: Path,
+                      cp: dict | None = None) -> None:
     runs = runs_2d_metro(bench)
     best = best_per_variant(runs)
     top = max(best.values(), key=lambda r: r["median"])
@@ -336,6 +529,7 @@ def write_results_tex(bench: dict, val: dict | None, bench_path: Path) -> None:
                  ("bestThreeL", str(b3["size"][0]) if b3 else "n/a"),
                  ("bestThreePct", fmt(b3["pct_copy_bw"]) if b3 else "n/a")):
         lines.append(f"\\newcommand{{\\{k}}}{{{v}}}")
+    lines += cp_macros(cp, bench)
     (ROOT / "paper" / "results.tex").write_text("\n".join(lines) + "\n")
 
 
@@ -357,7 +551,8 @@ def _replace_block(text: str, tag: str, body: str) -> str:
     return text[:i] + "\n" + body.strip() + "\n" + text[j:]
 
 
-def update_readme(bench: dict, val: dict | None, bench_path: Path) -> None:
+def update_readme(bench: dict, val: dict | None, bench_path: Path,
+                  cp: dict | None = None) -> None:
     """Fill the README's generated blocks (headline, table, validation) from the JSON."""
     readme = ROOT / "README.md"
     if not readme.exists():
@@ -402,6 +597,8 @@ def update_readme(bench: dict, val: dict | None, bench_path: Path) -> None:
         if val.get("quick"):
             vb = "> quick validation run (small lattices)\n\n" + vb
         text = _replace_block(text, "validation", vb)
+    if cp and "<!-- counterparts:start -->" in text:
+        text = _replace_block(text, "counterparts", readme_counterparts(cp))
     readme.write_text(text)
 
 
@@ -425,8 +622,11 @@ def main() -> None:
     if val:
         fig_validation(val)
         fig_binder(val)
-    write_results_tex(bench, val, bp)
-    update_readme(bench, val, bp)
+    cp = load_counterparts()
+    if cp:
+        fig_counterparts(cp, bench)
+    write_results_tex(bench, val, bp, cp)
+    update_readme(bench, val, bp, cp)
     print(f"figures from {bp.name}" + (f" + {vp.name}" if val else "") +
           f"; provisional={bench.get('provisional')}")
 

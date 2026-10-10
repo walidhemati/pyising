@@ -117,6 +117,14 @@ Source: `results/rtx3070-laptop.json`.
 | CUDA C (CuPy) | msc-eager32 | 4096 | 211.81 | 79.4 | 22.0 |
 <!-- table:end -->
 
+**Head-to-head with NVIDIA's reference implementation** (same GPU, same lattices; `bench/counterparts.py`):
+
+![counterparts](figures/counterparts.png)
+
+<!-- counterparts:start -->
+**PROVISIONAL** (shared-GPU quick run, `bench/counterparts.py --quick`): on the same GPU at T = T_c, NVIDIA's reference code ([NVIDIA/ising-gpu](https://github.com/NVIDIA/ising-gpu) @ `935796d`) reaches 201.3 flips/ns with its 1-bit `cuIsingModel` (Bisson et al. 2025, L = 4096) and 169.2 with the 4-bit code of Romero et al. 2020 (L = 4096); pyising's best packed kernel (CUDA C (CuPy)) reaches 364.8 flips/ns (L = 4096), 1.81x the 1-bit reference. Details: `bench/counterparts.py`, `results/counterparts.json`, `figures/counterparts.png`.
+<!-- counterparts:end -->
+
 ## How it works
 
 1. **NumPy reference**: compressed checkerboard layout (one array per colour), vectorised
@@ -135,6 +143,7 @@ Memory model: a half sweep reads both colour arrays once and writes one, so an u
 ```bash
 python bench/run.py --full          # < 15 min on an idle GPU -> results/rtx3070-laptop.json
 python -m pyising validate          # -> results/validation.json
+python bench/counterparts.py --full # NVIDIA/ising-gpu head-to-head -> results/counterparts.json
 python figures/make_figures.py      # figures/*.pdf|png, paper/results.tex, README tables
 cd paper && tectonic paper.tex      # paper/paper.pdf
 ```
