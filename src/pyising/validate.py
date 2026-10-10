@@ -97,10 +97,14 @@ def energy_scan_2d(cfg: dict, log=print) -> list[dict]:
     """2D |m|(T), e(T) for Metropolis int8, Metropolis msc, heat bath int8."""
     rows = []
     L = cfg["L2"]
-    for variant, alg in (("int8", "metropolis"), ("msc", "metropolis"), ("int8", "heatbath")):
+    for k, (variant, alg) in enumerate((("int8", "metropolis"), ("msc", "metropolis"),
+                                         ("int8", "heatbath"))):
         be, var = _pick(variant, 2, alg)
-        for T in cfg["T2"]:
-            sim = B.create(be, var, shape=(L, L), beta=1.0 / T, seed=7, algorithm=alg,
+        for i, T in enumerate(cfg["T2"]):
+            # an independent random stream per (variant, T): with one shared seed the
+            # counter-based uniforms are identical at every T and the errors correlate
+            sim = B.create(be, var, shape=(L, L), beta=1.0 / T, seed=7 + 1000 * k + i,
+                           algorithm=alg,
                            init=equilibrated((L, L), T, seed=int(1000 * T)))
             s = sample(sim, cfg["therm"], _n_meas(cfg, T, TC_2D), cfg["every"]).summary()
             e_ex = energy_torus(T, L)
@@ -152,12 +156,13 @@ def scan_3d(cfg: dict, log=print) -> list[dict]:
     """3D Metropolis and heat bath (GPU) vs Wolff (CPU) energies at the same L."""
     rows = []
     L = cfg["L3"]
-    for T in cfg["T3"]:
-        w = Wolff((L, L, L), 1.0 / T, seed=5)
+    for i, T in enumerate(cfg["T3"]):
+        w = Wolff((L, L, L), 1.0 / T, seed=5 + i)
         ws = sample(w, 200, _n_meas(cfg, T, TC_3D), 1).summary()
-        for alg in ("metropolis", "heatbath"):
+        for k, alg in enumerate(("metropolis", "heatbath")):
             be, var = _pick("int8", 3, alg)
-            sim = B.create(be, var, shape=(L, L, L), beta=1.0 / T, seed=11, algorithm=alg,
+            sim = B.create(be, var, shape=(L, L, L), beta=1.0 / T, seed=11 + 1000 * k + i,
+                           algorithm=alg,
                            init=w.spins.reshape(L, L, L).copy())
             s = sample(sim, cfg["therm"], _n_meas(cfg, T, TC_3D), cfg["every"]).summary()
             err = float(np.hypot(s["e_err"], ws["e_err"]))
