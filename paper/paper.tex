@@ -165,7 +165,8 @@ Energy and magnetisation are reduced on the device (every bond has exactly one c
 so $E=-\sum_{i\in0}s_ih_i$; packed lattices use population counts). Errors come from 32-block
 binning; Binder errors from a blocked jackknife. Validation runs start from Wolff-equilibrated
 configurations, so critical slowing down of the local dynamics affects only the error bars,
-not the mean.
+not the mean. Every variant and temperature uses its own random stream, so the deviations at different
+temperatures are independent.
 
 \section{Implementation: the optimisation ladder}
 

@@ -83,11 +83,11 @@ simulations (3D energies). Summary from `results/validation.json`:
 | check | result |
 |---|---|
 | bitwise identity across backends | 33 checks, all identical |
-| 2D energy vs exact finite torus | max abs error 4.3e-03, max 3.29 sigma |
-| 2D abs(m) vs Onsager-Yang (T < T_c - 0.2) | max abs error 3.8e-04 |
+| 2D energy vs exact finite torus | max abs error 2.2e-03, max 2.11 sigma |
+| 2D abs(m) vs Onsager-Yang (T < T_c - 0.2) | max abs error 3.0e-04 |
 | 2D T_c from Binder crossing | 2.2712 (0.09 % from Onsager) |
 | 3D T_c from Binder crossing | 4.5102 (0.03 % from Ferrenberg et al. 2018) |
-| 3D GPU vs Wolff energies | max 1.19 sigma |
+| 3D GPU vs Wolff energies | max 2.49 sigma |
 <!-- validation:end -->
 
 ## Performance
