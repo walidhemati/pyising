@@ -50,7 +50,7 @@
    "tensorcore": {
     "dir": "tensorcore",
     "make_overrides": {
-     "CUDACFLAGS": "-std=c++17 -c -O3 -lineinfo -arch=sm_86 -Xptxas=-v -I../external/cub --pre-include /home/hemati/python-hpc/pyising/bench/counterparts/tensorcore_compat.h"
+     "CUDACFLAGS": "-std=c++17 -c -O3 -lineinfo -arch=sm_86 -Xptxas=-v -I../external/cub --pre-include ~/python-hpc/pyising/bench/counterparts/tensorcore_compat.h"
     },
     "patches": [
      "-arch=sm_70 -> sm_86",
@@ -63,7 +63,7 @@
    "optimized_old": {
     "dir": "optimized/old",
     "make_overrides": {
-     "CUDACFLAGS": "-c -O3 --use_fast_math -lineinfo -arch=sm_86 -Xptxas=-v --pre-include /home/hemati/python-hpc/pyising/bench/counterparts/cuda13_compat.h"
+     "CUDACFLAGS": "-c -O3 --use_fast_math -lineinfo -arch=sm_86 -Xptxas=-v --pre-include ~/python-hpc/pyising/bench/counterparts/cuda13_compat.h"
     },
     "patches": [
      "-arch=sm_70 -> sm_86",
@@ -76,7 +76,7 @@
     "dir": "optimized/cuIsingModel",
     "make_overrides": {
      "CUDA_HOME": "/usr/local/cuda",
-     "CUDACFLAGS": "-c -O3 -lineinfo -gencode arch=compute_86,code=sm_86 -Xptxas=-v --pre-include /home/hemati/python-hpc/pyising/bench/counterparts/cuda13_compat.h"
+     "CUDACFLAGS": "-c -O3 -lineinfo -gencode arch=compute_86,code=sm_86 -Xptxas=-v --pre-include ~/python-hpc/pyising/bench/counterparts/cuda13_compat.h"
     },
     "patches": [
      "SMS=89 -> sm_86, CUDA_HOME=/opt/cuda-12.8.1 -> /usr/local/cuda",
