@@ -319,7 +319,7 @@ def cp_macros(cp: dict | None, bench: dict) -> list[str]:
              for s in ("Flips", "L", "Backend")]
     keys += ["cpRatioOpt", "cpRatioPyOpt", "cpRatioOld", "cpRatioBasic", "cpRatioPyBasic",
              "cpOptCompare", "cpPyOptCompare", "cpOldCompare", "cpEnergyL", "cpEnergySweeps",
-             "cpEnergyTheirs", "cpEnergyOurs", "cpEnergyMaxZ", "cpBasicIdentical",
+             "cpEnergySeeds", "cpEnergyTheirs", "cpEnergyOurs", "cpEnergyMaxZ", "cpBasicIdentical",
              "cpPctCopyOpt", "cpPctCopyOld"]
     m.update({k: "n/a" for k in keys})
     m["cpTable"] = "n/a"
@@ -366,6 +366,7 @@ def cp_macros(cp: dict | None, bench: dict) -> list[str]:
             ms = er["mean_std"]
             m["cpEnergyL"] = str(er["L"])
             m["cpEnergySweeps"] = str(er["sweeps"])
+            m["cpEnergySeeds"] = str(len(er["seeds"]))
             m["cpEnergyTheirs"] = fmt(ms["NVIDIA/ising-gpu cuIsingModel"][0], 4)
             if "pyising cupy-cuda-c/msc" in ms:
                 m["cpEnergyOurs"] = fmt(ms["pyising cupy-cuda-c/msc"][0], 4)

@@ -122,7 +122,7 @@ Source: `results/rtx3070-laptop.json`.
 ![counterparts](figures/counterparts.png)
 
 <!-- counterparts:start -->
-**PROVISIONAL** (shared-GPU quick run, `bench/counterparts.py --quick`): on the same GPU at T = T_c, NVIDIA's reference code ([NVIDIA/ising-gpu](https://github.com/NVIDIA/ising-gpu) @ `935796d`) reaches 201.3 flips/ns with its 1-bit `cuIsingModel` (Bisson et al. 2025, L = 4096) and 169.2 with the 4-bit code of Romero et al. 2020 (L = 4096); pyising's best packed kernel (CUDA C (CuPy)) reaches 364.8 flips/ns (L = 4096), 1.81x the 1-bit reference. Details: `bench/counterparts.py`, `results/counterparts.json`, `figures/counterparts.png`.
+Measured on the same GPU at T = T_c, NVIDIA's reference code ([NVIDIA/ising-gpu](https://github.com/NVIDIA/ising-gpu) @ `935796d`) reaches 276.2 flips/ns with its 1-bit `cuIsingModel` (Bisson et al. 2025, L = 32768) and 176.8 with the 4-bit code of Romero et al. 2020 (L = 32768); pyising's best packed kernel (CUDA C (CuPy)) reaches 419.0 flips/ns (L = 4096), 1.52x the 1-bit reference. Details: `bench/counterparts.py`, `results/counterparts.json`, `figures/counterparts.png`.
 <!-- counterparts:end -->
 
 ## How it works

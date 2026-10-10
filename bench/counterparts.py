@@ -450,7 +450,9 @@ def main() -> int:
     if "cuIsingModel" not in skipped and (not only or "cuIsingModel" in only):
         try:
             checks["energy_relaxation"] = physics_check(
-                args.ref_dir, 4096, 200 if args.quick else 1000, [1, 2, 3], args)
+                args.ref_dir, 4096, 200 if args.quick else 1000,
+                # 12 seeds in --full: three seeds under-resolve the scatter of e(t)
+                [1, 2, 3] if args.quick else list(range(101, 113)), args)
         except (RuntimeError, subprocess.SubprocessError) as exc:
             failures.append({"variant": "physics_check", "error": str(exc)[-400:]})
 

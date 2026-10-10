@@ -3,7 +3,7 @@
   "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
   "python": "3.13.2",
   "torch": "2.7.0+cu126",
-  "date": "2026-10-10T12:42:54+00:00",
+  "date": "2026-10-10T13:58:41+00:00",
   "triton": "3.3.0",
   "warp": "1.18.0",
   "cupy": "13.5.1",
@@ -14,8 +14,8 @@
   "gcc": "gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
   "cp_ising_venv": "{'numba': '0.68.0', 'numba-cuda': '0.30.4', 'cuda-bindings': '12.9.4', 'cupy-cuda12x': '12.3.0', 'numpy': '1.26.4', 'mpi4py': '4.1.2'}"
  },
- "provisional": true,
- "mode": "quick",
+ "provisional": false,
+ "mode": "full",
  "counterpart": {
   "repo": "https://github.com/NVIDIA/ising-gpu.git",
   "commit": "935796d7a26016670363af7a0dced8a9ebcd4714",
@@ -90,7 +90,7 @@
  },
  "metric": "attempted spin updates per ns over the whole lattice (L^2 x sweeps / s), as printed by each counterpart; pyising: bench/run.py time_one",
  "temperature": 2.269185314213022,
- "min_time_s": 0.1,
+ "min_time_s": 0.5,
  "runs": [
   {
    "code": "NVIDIA/ising-gpu",
@@ -102,28 +102,28 @@
    ],
    "spin_bits": 8,
    "metric": "flips/ns",
-   "median": 21.373,
-   "min": 20.977,
-   "max": 21.915,
+   "median": 26.001,
+   "min": 25.999,
+   "max": 26.03,
    "repeats": 5,
    "raw": [
-    21.144,
-    21.613,
-    21.915,
-    20.977,
-    21.373
+    26.03,
+    26.001,
+    26.001,
+    25.999,
+    26.004
    ],
-   "sweeps_per_repeat": 152,
+   "sweeps_per_repeat": 795,
    "temperature": 2.269185314213022,
    "observable": "abs_m",
    "observable_values": [
-    0.00579286,
-    0.00579286,
-    0.00579286,
-    0.00579286,
-    0.00579286
+    0.00598681,
+    0.00598681,
+    0.00598681,
+    0.00598681,
+    0.00598681
    ],
-   "command": "basic_cuda/ising_basic -x 4096 -y 4096 -w 30 -n 152 -a 1.0 -s 12345",
+   "command": "basic_cuda/ising_basic -x 4096 -y 4096 -w 100 -n 795 -a 1.0 -s 12345",
    "notes": "T=Tc, hot start, their timing: host std::chrono around the trial loop (warm-up excluded); includes the cuRAND call that fills one float per site before each half-sweep"
   },
   {
@@ -136,28 +136,28 @@
    ],
    "spin_bits": 8,
    "metric": "flips/ns",
-   "median": 3.03,
-   "min": 1.744,
-   "max": 5.105,
+   "median": 5.241,
+   "min": 5.116,
+   "max": 5.242,
    "repeats": 5,
    "raw": [
-    3.912,
-    5.105,
-    1.906,
-    3.03,
-    1.744
+    5.116,
+    5.241,
+    5.242,
+    5.242,
+    5.241
    ],
-   "sweeps_per_repeat": 31,
+   "sweeps_per_repeat": 156,
    "temperature": 2.269185314213022,
    "observable": "abs_m",
    "observable_values": [
-    0.004330635070800781,
-    0.004330635070800781,
-    0.004330635070800781,
-    0.004330635070800781,
-    0.004330635070800781
+    0.004909634590148926,
+    0.004909634590148926,
+    0.004909634590148926,
+    0.004909634590148926,
+    0.004909634590148926
    ],
-   "command": "basic_python/ising_basic.py -x 4096 -y 4096 -w 10 -n 31 -a 1.0 -s 12345",
+   "command": "basic_python/ising_basic.py -x 4096 -y 4096 -w 31 -n 156 -a 1.0 -s 12345",
    "notes": "T=Tc, hot start, their timing: host time.time() around the trial loop (warm-up excluded); includes the CuPy cuRAND call that fills one float per site before each half-sweep"
   },
   {
@@ -170,28 +170,28 @@
    ],
    "spin_bits": 16,
    "metric": "flips/ns",
-   "median": 11.146,
-   "min": 5.429,
-   "max": 18.143,
+   "median": 19.484,
+   "min": 19.469,
+   "max": 19.494,
    "repeats": 5,
    "raw": [
-    10.307,
-    18.143,
-    11.146,
-    18.067,
-    5.429
+    19.469,
+    19.493,
+    19.476,
+    19.484,
+    19.494
    ],
-   "sweeps_per_repeat": 58,
+   "sweeps_per_repeat": 584,
    "temperature": 2.269185314213022,
    "observable": "abs_m",
    "observable_values": [
-    0.00193608,
-    0.00193608,
-    0.00193608,
-    0.00193608,
-    0.00193608
+    0.00291121,
+    0.00291121,
+    0.00291121,
+    0.00291121,
+    0.00291121
    ],
-   "command": "tensorcore/ising_tensorcore -x 16 -y 16 -w 11 -n 58 -a 1.0 -s 12345",
+   "command": "tensorcore/ising_tensorcore -x 16 -y 16 -w 100 -n 584 -a 1.0 -s 12345",
    "notes": "T=Tc, hot start, their timing: host std::chrono around the trial loop (warm-up excluded)"
   },
   {
@@ -204,28 +204,28 @@
    ],
    "spin_bits": 4,
    "metric": "flips/ns",
-   "median": 169.15,
-   "min": 97.61,
-   "max": 180.68,
+   "median": 157.06,
+   "min": 151.51,
+   "max": 158.12,
    "repeats": 5,
    "raw": [
-    97.61,
-    98.91,
-    177.43,
-    169.15,
-    180.68
+    157.06,
+    157.74,
+    158.12,
+    154.77,
+    151.51
    ],
-   "sweeps_per_repeat": 339,
+   "sweeps_per_repeat": 5617,
    "temperature": 2.269185314213022,
    "observable": "abs_m",
    "observable_values": [
-    0.004152,
-    0.004152,
-    0.004152,
-    0.004152,
-    0.004152
+    0.044539,
+    0.044539,
+    0.044539,
+    0.044539,
+    0.044539
    ],
-   "command": "optimized/old/cuIsing -x 4096 -y 4096 -n 339 -a 1.0 -s 12345",
+   "command": "optimized/old/cuIsing -x 4096 -y 4096 -n 5617 -a 1.0 -s 12345",
    "notes": "T=Tc, hot start, their timing: cudaEvent pair around the update loop (single GPU)"
   },
   {
@@ -238,28 +238,28 @@
    ],
    "spin_bits": 1,
    "metric": "flips/ns",
-   "median": 201.28,
-   "min": 179.57,
-   "max": 202.48,
+   "median": 206.32,
+   "min": 204.73,
+   "max": 208.59,
    "repeats": 5,
    "raw": [
-    195.93,
-    202.48,
-    179.57,
-    201.28,
-    201.61
+    206.32,
+    204.73,
+    206.11,
+    206.39,
+    208.59
    ],
-   "sweeps_per_repeat": 1264,
+   "sweeps_per_repeat": 6083,
    "temperature": 2.269185314213022,
    "observable": "e",
    "observable_values": [
-    -1.400932,
-    -1.400932,
-    -1.400932,
-    -1.400932,
-    -1.400932
+    -1.408475,
+    -1.408475,
+    -1.408475,
+    -1.408475,
+    -1.408475
    ],
-   "command": "optimized/cuIsingModel/cuIsing -x 4096 -y 4096 -n 1264 -a 1.0 -s 12345",
+   "command": "optimized/cuIsingModel/cuIsing -x 4096 -y 4096 -n 6083 -a 1.0 -s 12345",
    "notes": "T=Tc, hot start, their timing: host wall clock around the update loop, which synchronises the device after every half-sweep; value = the final 'spins/ns' it prints"
   },
   {
@@ -274,15 +274,63 @@
    ],
    "spin_bits": 8,
    "metric": "flips/ns",
-   "median": 46.938,
-   "min": 46.125,
-   "max": 51.207,
+   "median": 52.684,
+   "min": 52.322,
+   "max": 54.23,
    "repeats": 5,
-   "sweeps_per_repeat": 351,
+   "sweeps_per_repeat": 1759,
    "temperature": 2.269185314213022,
    "observable": "e",
    "observable_values": [
-    -1.4017341136932373
+    -1.4095139503479004
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "warp/int8",
+   "backend": "warp",
+   "layout": "int8",
+   "L": 4096,
+   "size": [
+    4096,
+    4096
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 41.472,
+   "min": 39.943,
+   "max": 42.798,
+   "repeats": 5,
+   "sweeps_per_repeat": 1464,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.409435749053955
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "numba/int8",
+   "backend": "numba",
+   "layout": "int8",
+   "L": 4096,
+   "size": [
+    4096,
+    4096
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 41.898,
+   "min": 41.186,
+   "max": 42.321,
+   "repeats": 5,
+   "sweeps_per_repeat": 1243,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4077365398406982
    ],
    "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
   },
@@ -298,15 +346,39 @@
    ],
    "spin_bits": 8,
    "metric": "flips/ns",
-   "median": 63.141,
-   "min": 63.074,
-   "max": 70.492,
+   "median": 76.037,
+   "min": 75.433,
+   "max": 77.459,
    "repeats": 5,
-   "sweeps_per_repeat": 492,
+   "sweeps_per_repeat": 2649,
    "temperature": 2.269185314213022,
    "observable": "e",
    "observable_values": [
-    -1.4042470455169678
+    -1.4104955196380615
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "triton/msc",
+   "backend": "triton",
+   "layout": "msc",
+   "L": 4096,
+   "size": [
+    4096,
+    4096
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 336.701,
+   "min": 327.133,
+   "max": 337.848,
+   "repeats": 5,
+   "sweeps_per_repeat": 5466,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4119362831115723
    ],
    "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
   },
@@ -322,15 +394,39 @@
    ],
    "spin_bits": 1,
    "metric": "flips/ns",
-   "median": 300.83,
-   "min": 285.27,
-   "max": 310.413,
+   "median": 342.65,
+   "min": 338.979,
+   "max": 351.099,
    "repeats": 5,
-   "sweeps_per_repeat": 230,
+   "sweeps_per_repeat": 5553,
    "temperature": 2.269185314213022,
    "observable": "e",
    "observable_values": [
-    -1.399353265762329
+    -1.4122865200042725
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "numba/msc",
+   "backend": "numba",
+   "layout": "msc",
+   "L": 4096,
+   "size": [
+    4096,
+    4096
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 246.727,
+   "min": 235.864,
+   "max": 251.204,
+   "repeats": 5,
+   "sweeps_per_repeat": 4257,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.410412073135376
    ],
    "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
   },
@@ -346,15 +442,1361 @@
    ],
    "spin_bits": 1,
    "metric": "flips/ns",
-   "median": 364.794,
-   "min": 364.541,
-   "max": 402.12,
+   "median": 419.004,
+   "min": 409.525,
+   "max": 423.307,
    "repeats": 5,
-   "sweeps_per_repeat": 1441,
+   "sweeps_per_repeat": 7214,
    "temperature": 2.269185314213022,
    "observable": "e",
    "observable_values": [
-    -1.4069640636444092
+    -1.4123139381408691
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "basic_cuda",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 27.092,
+   "min": 27.078,
+   "max": 27.158,
+   "repeats": 5,
+   "raw": [
+    27.092,
+    27.081,
+    27.138,
+    27.078,
+    27.158
+   ],
+   "sweeps_per_repeat": 228,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.00458011,
+    0.00458011,
+    0.00458011,
+    0.00458011,
+    0.00458011
+   ],
+   "command": "basic_cuda/ising_basic -x 8192 -y 8192 -w 45 -n 228 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host std::chrono around the trial loop (warm-up excluded); includes the cuRAND call that fills one float per site before each half-sweep"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "basic_python",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 5.308,
+   "min": 5.307,
+   "max": 5.308,
+   "repeats": 5,
+   "raw": [
+    5.308,
+    5.307,
+    5.308,
+    5.308,
+    5.307
+   ],
+   "sweeps_per_repeat": 40,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.0014052093029022217,
+    0.0014052093029022217,
+    0.0014052093029022217,
+    0.0014052093029022217,
+    0.0014052093029022217
+   ],
+   "command": "basic_python/ising_basic.py -x 8192 -y 8192 -w 10 -n 40 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host time.time() around the trial loop (warm-up excluded); includes the CuPy cuRAND call that fills one float per site before each half-sweep"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "tensorcore",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 16,
+   "metric": "flips/ns",
+   "median": 20.493,
+   "min": 20.314,
+   "max": 20.499,
+   "repeats": 5,
+   "raw": [
+    20.493,
+    20.499,
+    20.498,
+    20.314,
+    20.45
+   ],
+   "sweeps_per_repeat": 153,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.000234216,
+    0.000234216,
+    0.000234216,
+    0.000234216,
+    0.000234216
+   ],
+   "command": "tensorcore/ising_tensorcore -x 32 -y 32 -w 30 -n 153 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host std::chrono around the trial loop (warm-up excluded)"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "optimized_old",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 4,
+   "metric": "flips/ns",
+   "median": 170.06,
+   "min": 162.12,
+   "max": 170.43,
+   "repeats": 5,
+   "raw": [
+    162.12,
+    162.31,
+    170.06,
+    170.32,
+    170.43
+   ],
+   "sweeps_per_repeat": 1644,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.001874,
+    0.001874,
+    0.001874,
+    0.001874,
+    0.001874
+   ],
+   "command": "optimized/old/cuIsing -x 8192 -y 8192 -n 1644 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: cudaEvent pair around the update loop (single GPU)"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "cuIsingModel",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 260.4,
+   "min": 259.53,
+   "max": 260.7,
+   "repeats": 5,
+   "raw": [
+    260.7,
+    260.5,
+    260.4,
+    259.53,
+    259.85
+   ],
+   "sweeps_per_repeat": 2216,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.403969,
+    -1.403969,
+    -1.403969,
+    -1.403969,
+    -1.403969
+   ],
+   "command": "optimized/cuIsingModel/cuIsing -x 8192 -y 8192 -n 2216 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host wall clock around the update loop, which synchronises the device after every half-sweep; value = the final 'spins/ns' it prints"
+  },
+  {
+   "code": "pyising",
+   "variant": "triton/int8",
+   "backend": "triton",
+   "layout": "int8",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 54.327,
+   "min": 54.172,
+   "max": 55.589,
+   "repeats": 5,
+   "sweeps_per_repeat": 525,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4048356413841248
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "warp/int8",
+   "backend": "warp",
+   "layout": "int8",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 44.19,
+   "min": 43.627,
+   "max": 44.644,
+   "repeats": 5,
+   "sweeps_per_repeat": 421,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4040557742118835
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "numba/int8",
+   "backend": "numba",
+   "layout": "int8",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 42.782,
+   "min": 42.203,
+   "max": 43.141,
+   "repeats": 5,
+   "sweeps_per_repeat": 365,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.403235912322998
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "cupy-cuda-c/int8",
+   "backend": "cupy-cuda-c",
+   "layout": "int8",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 74.963,
+   "min": 73.707,
+   "max": 78.417,
+   "repeats": 5,
+   "sweeps_per_repeat": 772,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4054011106491089
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "triton/msc",
+   "backend": "triton",
+   "layout": "msc",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 327.748,
+   "min": 317.194,
+   "max": 329.391,
+   "repeats": 5,
+   "sweeps_per_repeat": 2681,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4096553325653076
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "warp/msc",
+   "backend": "warp",
+   "layout": "msc",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 362.215,
+   "min": 360.187,
+   "max": 370.333,
+   "repeats": 5,
+   "sweeps_per_repeat": 2470,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4096455574035645
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "numba/msc",
+   "backend": "numba",
+   "layout": "msc",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 318.645,
+   "min": 310.937,
+   "max": 323.813,
+   "repeats": 5,
+   "sweeps_per_repeat": 2113,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4089735746383667
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "cupy-cuda-c/msc",
+   "backend": "cupy-cuda-c",
+   "layout": "msc",
+   "L": 8192,
+   "size": [
+    8192,
+    8192
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 402.96,
+   "min": 395.971,
+   "max": 407.734,
+   "repeats": 5,
+   "sweeps_per_repeat": 2894,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4109493494033813
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "basic_cuda",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 27.346,
+   "min": 27.296,
+   "max": 27.388,
+   "repeats": 5,
+   "raw": [
+    27.346,
+    27.386,
+    27.324,
+    27.388,
+    27.296
+   ],
+   "sweeps_per_repeat": 51,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.000277326,
+    0.000277326,
+    0.000277326,
+    0.000277326,
+    0.000277326
+   ],
+   "command": "basic_cuda/ising_basic -x 16384 -y 16384 -w 10 -n 51 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host std::chrono around the trial loop (warm-up excluded); includes the cuRAND call that fills one float per site before each half-sweep"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "basic_python",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 5.326,
+   "min": 5.323,
+   "max": 5.328,
+   "repeats": 5,
+   "raw": [
+    5.323,
+    5.327,
+    5.326,
+    5.326,
+    5.328
+   ],
+   "sweeps_per_repeat": 10,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.0007749423384666443,
+    0.0007749423384666443,
+    0.0007749423384666443,
+    0.0007749423384666443,
+    0.0007749423384666443
+   ],
+   "command": "basic_python/ising_basic.py -x 16384 -y 16384 -w 10 -n 10 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host time.time() around the trial loop (warm-up excluded); includes the CuPy cuRAND call that fills one float per site before each half-sweep"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "tensorcore",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 16,
+   "metric": "flips/ns",
+   "median": 20.867,
+   "min": 20.841,
+   "max": 20.878,
+   "repeats": 5,
+   "raw": [
+    20.844,
+    20.841,
+    20.869,
+    20.878,
+    20.867
+   ],
+   "sweeps_per_repeat": 39,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.00146327,
+    0.00146327,
+    0.00146327,
+    0.00146327,
+    0.00146327
+   ],
+   "command": "tensorcore/ising_tensorcore -x 64 -y 64 -w 10 -n 39 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host std::chrono around the trial loop (warm-up excluded)"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "optimized_old",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 4,
+   "metric": "flips/ns",
+   "median": 174.77,
+   "min": 174.65,
+   "max": 175.41,
+   "repeats": 5,
+   "raw": [
+    174.77,
+    174.95,
+    175.41,
+    174.65,
+    174.7
+   ],
+   "sweeps_per_repeat": 430,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.00258,
+    0.00258,
+    0.00258,
+    0.00258,
+    0.00258
+   ],
+   "command": "optimized/old/cuIsing -x 16384 -y 16384 -n 430 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: cudaEvent pair around the update loop (single GPU)"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "cuIsingModel",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 273.66,
+   "min": 272.92,
+   "max": 275.37,
+   "repeats": 5,
+   "raw": [
+    275.37,
+    273.88,
+    273.66,
+    273.48,
+    272.92
+   ],
+   "sweeps_per_repeat": 623,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.395307,
+    -1.395307,
+    -1.395307,
+    -1.395307,
+    -1.395307
+   ],
+   "command": "optimized/cuIsingModel/cuIsing -x 16384 -y 16384 -n 623 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host wall clock around the update loop, which synchronises the device after every half-sweep; value = the final 'spins/ns' it prints"
+  },
+  {
+   "code": "pyising",
+   "variant": "triton/int8",
+   "backend": "triton",
+   "layout": "int8",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 54.339,
+   "min": 53.794,
+   "max": 54.406,
+   "repeats": 5,
+   "sweeps_per_repeat": 135,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3962868452072144
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "warp/int8",
+   "backend": "warp",
+   "layout": "int8",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 44.211,
+   "min": 43.738,
+   "max": 44.482,
+   "repeats": 5,
+   "sweeps_per_repeat": 107,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.394464835524559
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "numba/int8",
+   "backend": "numba",
+   "layout": "int8",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 42.035,
+   "min": 41.691,
+   "max": 42.4,
+   "repeats": 5,
+   "sweeps_per_repeat": 97,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3935533463954926
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "cupy-cuda-c/int8",
+   "backend": "cupy-cuda-c",
+   "layout": "int8",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 76.417,
+   "min": 75.829,
+   "max": 77.074,
+   "repeats": 5,
+   "sweeps_per_repeat": 197,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.399085819721222
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "triton/msc",
+   "backend": "triton",
+   "layout": "msc",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 333.881,
+   "min": 332.28,
+   "max": 342.803,
+   "repeats": 5,
+   "sweeps_per_repeat": 795,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4064307510852814
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "warp/msc",
+   "backend": "warp",
+   "layout": "msc",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 371.223,
+   "min": 362.709,
+   "max": 373.787,
+   "repeats": 5,
+   "sweeps_per_repeat": 822,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4063508212566376
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "numba/msc",
+   "backend": "numba",
+   "layout": "msc",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 327.282,
+   "min": 322.582,
+   "max": 332.02,
+   "repeats": 5,
+   "sweeps_per_repeat": 671,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4052301198244095
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "cupy-cuda-c/msc",
+   "backend": "cupy-cuda-c",
+   "layout": "msc",
+   "L": 16384,
+   "size": [
+    16384,
+    16384
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 413.462,
+   "min": 410.082,
+   "max": 422.549,
+   "repeats": 5,
+   "sweeps_per_repeat": 914,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4067654311656952
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "basic_cuda",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 26.353,
+   "min": 26.178,
+   "max": 26.363,
+   "repeats": 5,
+   "raw": [
+    26.363,
+    26.178,
+    26.353,
+    26.361,
+    26.242
+   ],
+   "sweeps_per_repeat": 13,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.000470504,
+    0.000470504,
+    0.000470504,
+    0.000470504,
+    0.000470504
+   ],
+   "command": "basic_cuda/ising_basic -x 32768 -y 32768 -w 10 -n 13 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host std::chrono around the trial loop (warm-up excluded); includes the cuRAND call that fills one float per site before each half-sweep"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "basic_python",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 5.329,
+   "min": 5.328,
+   "max": 5.33,
+   "repeats": 5,
+   "raw": [
+    5.328,
+    5.328,
+    5.329,
+    5.33,
+    5.33
+   ],
+   "sweeps_per_repeat": 10,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.00038312189280986786,
+    0.00038312189280986786,
+    0.00038312189280986786,
+    0.00038312189280986786,
+    0.00038312189280986786
+   ],
+   "command": "basic_python/ising_basic.py -x 32768 -y 32768 -w 10 -n 10 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host time.time() around the trial loop (warm-up excluded); includes the CuPy cuRAND call that fills one float per site before each half-sweep"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "optimized_old",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 4,
+   "metric": "flips/ns",
+   "median": 176.81,
+   "min": 176.1,
+   "max": 177.14,
+   "repeats": 5,
+   "raw": [
+    176.47,
+    177.14,
+    176.81,
+    176.1,
+    176.89
+   ],
+   "sweeps_per_repeat": 109,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.000536,
+    0.000536,
+    0.000536,
+    0.000536,
+    0.000536
+   ],
+   "command": "optimized/old/cuIsing -x 32768 -y 32768 -n 109 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: cudaEvent pair around the update loop (single GPU)"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "cuIsingModel",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 276.24,
+   "min": 273.07,
+   "max": 276.47,
+   "repeats": 5,
+   "raw": [
+    276.47,
+    276.24,
+    276.37,
+    273.61,
+    273.07
+   ],
+   "sweeps_per_repeat": 156,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.378552,
+    -1.378552,
+    -1.378552,
+    -1.378552,
+    -1.378552
+   ],
+   "command": "optimized/cuIsingModel/cuIsing -x 32768 -y 32768 -n 156 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host wall clock around the update loop, which synchronises the device after every half-sweep; value = the final 'spins/ns' it prints"
+  },
+  {
+   "code": "pyising",
+   "variant": "triton/int8",
+   "backend": "triton",
+   "layout": "int8",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 55.306,
+   "min": 53.833,
+   "max": 55.564,
+   "repeats": 5,
+   "sweeps_per_repeat": 26,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3766656145453453
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "warp/int8",
+   "backend": "warp",
+   "layout": "int8",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 44.676,
+   "min": 44.634,
+   "max": 44.681,
+   "repeats": 5,
+   "sweeps_per_repeat": 21,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3728003539144993
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "numba/int8",
+   "backend": "numba",
+   "layout": "int8",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 41.982,
+   "min": 41.144,
+   "max": 42.291,
+   "repeats": 5,
+   "sweeps_per_repeat": 20,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3718764185905457
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "cupy-cuda-c/int8",
+   "backend": "cupy-cuda-c",
+   "layout": "int8",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 8,
+   "metric": "flips/ns",
+   "median": 76.7,
+   "min": 73.9,
+   "max": 77.095,
+   "repeats": 5,
+   "sweeps_per_repeat": 39,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3828007876873016
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "triton/msc",
+   "backend": "triton",
+   "layout": "msc",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 340.605,
+   "min": 337.257,
+   "max": 344.606,
+   "repeats": 5,
+   "sweeps_per_repeat": 209,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3997104726731777
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "warp/msc",
+   "backend": "warp",
+   "layout": "msc",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 370.414,
+   "min": 366.473,
+   "max": 376.428,
+   "repeats": 5,
+   "sweeps_per_repeat": 222,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4000842534005642
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "numba/msc",
+   "backend": "numba",
+   "layout": "msc",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 323.506,
+   "min": 316.124,
+   "max": 326.41,
+   "repeats": 5,
+   "sweeps_per_repeat": 171,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3982814103364944
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "cupy-cuda-c/msc",
+   "backend": "cupy-cuda-c",
+   "layout": "msc",
+   "L": 32768,
+   "size": [
+    32768,
+    32768
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 411.428,
+   "min": 406.47,
+   "max": 419.261,
+   "repeats": 5,
+   "sweeps_per_repeat": 243,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.4006514996290207
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "optimized_old",
+   "L": 65536,
+   "size": [
+    65536,
+    65536
+   ],
+   "spin_bits": 4,
+   "metric": "flips/ns",
+   "median": 174.1,
+   "min": 173.97,
+   "max": 174.57,
+   "repeats": 5,
+   "raw": [
+    173.97,
+    174.02,
+    174.1,
+    174.56,
+    174.57
+   ],
+   "sweeps_per_repeat": 22,
+   "temperature": 2.269185314213022,
+   "observable": "abs_m",
+   "observable_values": [
+    0.000248,
+    0.000248,
+    0.000248,
+    0.000248,
+    0.000248
+   ],
+   "command": "optimized/old/cuIsing -x 65536 -y 65536 -n 22 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: cudaEvent pair around the update loop (single GPU)"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "cuIsingModel",
+   "L": 65536,
+   "size": [
+    65536,
+    65536
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 268.55,
+   "min": 267.96,
+   "max": 268.82,
+   "repeats": 5,
+   "raw": [
+    268.57,
+    268.82,
+    268.22,
+    267.96,
+    268.55
+   ],
+   "sweeps_per_repeat": 36,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.342458,
+    -1.342458,
+    -1.342458,
+    -1.342458,
+    -1.342458
+   ],
+   "command": "optimized/cuIsingModel/cuIsing -x 65536 -y 65536 -n 36 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host wall clock around the update loop, which synchronises the device after every half-sweep; value = the final 'spins/ns' it prints"
+  },
+  {
+   "code": "pyising",
+   "variant": "triton/msc",
+   "backend": "triton",
+   "layout": "msc",
+   "L": 65536,
+   "size": [
+    65536,
+    65536
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 341.892,
+   "min": 340.863,
+   "max": 342.0,
+   "repeats": 5,
+   "sweeps_per_repeat": 53,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3868694016709924
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "warp/msc",
+   "backend": "warp",
+   "layout": "msc",
+   "L": 65536,
+   "size": [
+    65536,
+    65536
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 369.797,
+   "min": 366.072,
+   "max": 374.135,
+   "repeats": 5,
+   "sweeps_per_repeat": 57,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3877738798037171
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "numba/msc",
+   "backend": "numba",
+   "layout": "msc",
+   "L": 65536,
+   "size": [
+    65536,
+    65536
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 321.316,
+   "min": 319.856,
+   "max": 326.245,
+   "repeats": 5,
+   "sweeps_per_repeat": 44,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3844902757555246
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "cupy-cuda-c/msc",
+   "backend": "cupy-cuda-c",
+   "layout": "msc",
+   "L": 65536,
+   "size": [
+    65536,
+    65536
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 410.224,
+   "min": 405.302,
+   "max": 413.488,
+   "repeats": 5,
+   "sweeps_per_repeat": 56,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3875449132174253
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "NVIDIA/ising-gpu",
+   "variant": "cuIsingModel",
+   "L": 131072,
+   "size": [
+    131072,
+    131072
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 268.17,
+   "min": 266.42,
+   "max": 268.86,
+   "repeats": 5,
+   "raw": [
+    266.6,
+    268.86,
+    266.42,
+    268.17,
+    268.56
+   ],
+   "sweeps_per_repeat": 10,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.275709,
+    -1.275709,
+    -1.275709,
+    -1.275709,
+    -1.275709
+   ],
+   "command": "optimized/cuIsingModel/cuIsing -x 131072 -y 131072 -n 10 -a 1.0 -s 12345",
+   "notes": "T=Tc, hot start, their timing: host wall clock around the update loop, which synchronises the device after every half-sweep; value = the final 'spins/ns' it prints"
+  },
+  {
+   "code": "pyising",
+   "variant": "triton/msc",
+   "backend": "triton",
+   "layout": "msc",
+   "L": 131072,
+   "size": [
+    131072,
+    131072
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 336.889,
+   "min": 336.184,
+   "max": 339.915,
+   "repeats": 5,
+   "sweeps_per_repeat": 10,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.357354869833216
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "warp/msc",
+   "backend": "warp",
+   "layout": "msc",
+   "L": 131072,
+   "size": [
+    131072,
+    131072
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 370.091,
+   "min": 365.309,
+   "max": 371.801,
+   "repeats": 5,
+   "sweeps_per_repeat": 11,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.359555906848982
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "numba/msc",
+   "backend": "numba",
+   "layout": "msc",
+   "L": 131072,
+   "size": [
+    131072,
+    131072
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 321.491,
+   "min": 321.119,
+   "max": 324.884,
+   "repeats": 5,
+   "sweeps_per_repeat": 10,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3573464637156576
+   ],
+   "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
+  },
+  {
+   "code": "pyising",
+   "variant": "cupy-cuda-c/msc",
+   "backend": "cupy-cuda-c",
+   "layout": "msc",
+   "L": 131072,
+   "size": [
+    131072,
+    131072
+   ],
+   "spin_bits": 1,
+   "metric": "flips/ns",
+   "median": 405.619,
+   "min": 401.245,
+   "max": 412.145,
+   "repeats": 5,
+   "sweeps_per_repeat": 13,
+   "temperature": 2.269185314213022,
+   "observable": "e",
+   "observable_values": [
+    -1.3632905629929155
    ],
    "notes": "T=Tc, hot start, bench/run.py time_one: JIT warm-up, device sync around each timed repeat"
   }
@@ -373,49 +1815,85 @@
   },
   "energy_relaxation": {
    "L": 4096,
-   "sweeps": 200,
+   "sweeps": 1000,
    "temperature": 2.269185314213022,
    "seeds": [
-    1,
-    2,
-    3
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112
    ],
    "energy_per_spin": {
     "NVIDIA/ising-gpu cuIsingModel": [
-     -1.383256,
-     -1.383035,
-     -1.381583
+     -1.399208,
+     -1.39864,
+     -1.398124,
+     -1.399188,
+     -1.39834,
+     -1.399269,
+     -1.399115,
+     -1.400216,
+     -1.399492,
+     -1.399188,
+     -1.400353,
+     -1.399459
     ],
     "pyising cupy-cuda-c/msc": [
-     -1.3845760822296143,
-     -1.3821370601654053,
-     -1.3828084468841553
+     -1.4000306129455566,
+     -1.3996071815490723,
+     -1.3987324237823486,
+     -1.399125099182129,
+     -1.399547815322876,
+     -1.3991892337799072,
+     -1.4000351428985596,
+     -1.3987476825714111,
+     -1.3992810249328613,
+     -1.400850534439087,
+     -1.3996143341064453,
+     -1.3995444774627686
     ],
     "pyising cupy-cuda-c/int8": [
-     -1.3830060958862305,
-     -1.3828625679016113,
-     -1.383354663848877
+     -1.3982667922973633,
+     -1.3986742496490479,
+     -1.3988289833068848,
+     -1.4008052349090576,
+     -1.4002833366394043,
+     -1.3988347053527832,
+     -1.3983502388000488,
+     -1.3995652198791504,
+     -1.3989589214324951,
+     -1.3999011516571045,
+     -1.3986356258392334,
+     -1.4004478454589844
     ]
    },
    "mean_std": {
     "NVIDIA/ising-gpu cuIsingModel": [
-     -1.382625,
-     0.000909
+     -1.399216,
+     0.000656
     ],
     "pyising cupy-cuda-c/msc": [
-     -1.383174,
-     0.00126
+     -1.399525,
+     0.000592
     ],
     "pyising cupy-cuda-c/int8": [
-     -1.383074,
-     0.000253
+     -1.399296,
+     0.000871
     ]
    },
    "z_vs_cuIsingModel": {
-    "pyising cupy-cuda-c/msc": -0.61,
-    "pyising cupy-cuda-c/int8": -0.83
+    "pyising cupy-cuda-c/msc": -1.21,
+    "pyising cupy-cuda-c/int8": -0.25
    }
   }
  },
- "seconds": 38.4
+ "seconds": 335.0
 }

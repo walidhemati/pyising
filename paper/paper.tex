@@ -330,7 +330,7 @@ sweep updates both colours once. We parse the rate each program prints, so their
 stay as written (host clock or CUDA events around the update loop; the basic codes include the
 cuRAND call that fills one uniform per site). Each configuration runs once to size the sweep count, then
 five times (median reported). As a check that both simulate the same model, the
-energy per spin after \cpEnergySweeps{} sweeps from a hot start on $L=\cpEnergyL$ (three seeds
+energy per spin after \cpEnergySweeps{} sweeps from a hot start on $L=\cpEnergyL$ (\cpEnergySeeds{} seeds
 each) is $\cpEnergyTheirs$ for \texttt{cuIsingModel} and $\cpEnergyOurs$ for our packed CUDA~C
 kernel, within \cpEnergyMaxZ{} standard errors. The basic CUDA and basic Python programs share
 the cuRAND stream and give \cpBasicIdentical{} magnetisations.
