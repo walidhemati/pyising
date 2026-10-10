@@ -132,7 +132,7 @@ def fig_roofline(bench: dict) -> None:
     x = np.logspace(-1.2, 1.3, 100)
     ax.plot(x, c["copy_bandwidth_GBs"] * x, **CEIL_STYLE)
     ax.plot(x, c["spec_bandwidth_GBs"] * x, color="0.6", lw=0.8, ls="--")
-    ax.text(2.2, c["copy_bandwidth_GBs"] * 2.2 * 1.5, f"copy {c['copy_bandwidth_GBs']:.0f} GB/s",
+    ax.text(1.3, c["copy_bandwidth_GBs"] * 1.3 * 0.22, f"copy {c['copy_bandwidth_GBs']:.0f} GB/s",
             rotation=33, fontsize=6.5, ha="center")
     ph = c["philox_calls_per_ns"]
     cpw = c.get("msc_philox_calls_per_word_warp_max_at_Tc",
@@ -286,6 +286,17 @@ def write_results_tex(bench: dict, val: dict | None, bench_path: Path) -> None:
                      (("cupy-cuda-c", "int8-rng-per-site"), "PerSite"),
                      (("cupy-cuda-c", "int8"), "CudaInt")):
         m[f"abl{tag}"] = fmt(best[key]["median"]) if key in best else "n/a"
+    # best Python-DSL kernel as a fraction of the CUDA C reference, per spin format
+    for variant, tag in (("int8", "Int"), ("msc", "Msc")):
+        dsl = [r for (b, v), r in best.items() if v == variant and b in ("triton", "warp", "numba")]
+        ref = best.get(("cupy-cuda-c", variant))
+        if dsl and ref:
+            top_dsl = max(dsl, key=lambda r: r["median"])
+            m[f"dsl{tag}Backend"] = LABEL[top_dsl["backend"]]
+            m[f"dsl{tag}PctCuda"] = fmt(100 * top_dsl["median"] / ref["median"], 0)
+    m["bestPctRngWarp"] = fmt(100 * top["median"] / (
+        c["philox_calls_per_ns"] * 64 / c.get("msc_philox_calls_per_word_warp_max_at_Tc",
+                                              float("nan"))))
     if val:
         s = val["summary"]
         m.update({

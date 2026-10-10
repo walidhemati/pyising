@@ -252,7 +252,7 @@ Dashed: copy-bandwidth ceiling.}
 \centering
 \includegraphics[width=\linewidth]{../figures/scaling.pdf}
 \caption{Throughput against lattice size. Small lattices are bound by kernel-launch latency;
-large lattices approach the bandwidth or RNG roof. Dotted lines are the RNG ablations.}
+large lattices reach a plateau below the roofs of \cref{fig:roofline}. Dotted lines are the RNG ablations.}
 \label{fig:scaling}
 \end{figure}
 
@@ -283,12 +283,14 @@ The best int8 kernel (\bestIntBackend) reaches \bestIntFlips{} flips/ns, \bestIn
 the copy-bandwidth ceiling: int8 Metropolis is memory-bound, and the RNG is cheap once one Philox
 call serves four sites (the per-site ablation runs at \ablPerSite{} flips/ns versus \ablCudaInt{}).
 
-\paragraph{Multi-spin coding.} Packing cuts the traffic eightfold and moves the bottleneck to
-random-number generation. The eager ablation that always draws 32 bits per spin reaches
-\ablEager{} flips/ns, the lazy kernel \ablLazy{} flips/ns. The best variant overall,
+\paragraph{Multi-spin coding.} Packing cuts the traffic eightfold and raises the memory ceiling
+to \memCeilMsc{} flips/ns, close to the per-warp Philox ceiling of \rngCeilMscWarp{} flips/ns.
+Random numbers are the largest single cost: the eager ablation that always draws 32 bits per spin
+reaches \ablEager{} flips/ns, the lazy kernel \ablLazy{} flips/ns. The best variant overall,
 \bestBackend{} at $L=\bestL$, reaches \bestFlips{} flips/ns, \bestPctCopy\,\% of the copy
-ceiling (\SI{\bestGBs}{GB/s} effective, \bestPctSpec\,\% of nominal), \speedupVsNumpy$\times$
-the NumPy reference. The best kernel written entirely in a Python DSL, \bestPyBackend{}, reaches
+ceiling (\SI{\bestGBs}{GB/s} effective, \bestPctSpec\,\% of nominal) and \bestPctRngWarp\,\% of
+the per-warp Philox ceiling, \speedupVsNumpy$\times$ the NumPy reference. Neither ceiling is
+reached; we have not profiled which on-chip resource limits the packed kernels. The best kernel written entirely in a Python DSL, \bestPyBackend{}, reaches
 \bestPyFlips{} flips/ns (\bestPyPctCopy\,\% of copy bandwidth).
 
 \paragraph{3D.} The simple-cubic int8 kernels reach \bestThreeFlips{} flips/ns
@@ -297,24 +299,25 @@ the NumPy reference. The best kernel written entirely in a Python DSL, \bestPyBa
 \paragraph{Comparison with published codes.} \citet{Romero2020} report 420.8 flips/ns for their
 optimised multi-spin code on a V100-SXM with HBM2 memory, about twice the nominal bandwidth of
 our laptop part, using 4-bit spins and one 32-bit uniform per spin; \citet{Block2010} report
-7.9 flips/ns on a Tesla C1060. Normalised per byte of nominal bandwidth, the laptop GPU running
-Python-hosted kernels is in the same class as the best published single-GPU codes; we stress that
-this is a per-device efficiency statement on different hardware generations, not a claim to
-exceed their throughput or their multi-GPU aggregates.
+7.9 flips/ns on a Tesla C1060. Our best kernel reaches \bestFlips{} flips/ns, about the same
+absolute rate on a part with half the nominal bandwidth. The gain is algorithmic (1 instead of
+4 bits per spin, \bitsPerSpinWarp{} instead of 32 random bits per spin), not a property of the
+host language, and it is a single-device statement on different hardware generations, not a
+claim to exceed their throughput or their multi-GPU aggregates.
 
 \section{Discussion}
 
 \paragraph{What carries the speed.} Three choices matter more than the language: a layout that
 touches only active spins, one random draw per spin amortised over many spins (four sites per
 Philox call for int8; 64 lanes per random word for packed spins), and a lazy comparison that
-spends random bits only on undecided lanes. Once these are in place, Triton, Warp and Numba
-kernels written in Python run within a small factor of, and sometimes ahead of, NVRTC-compiled
-CUDA~C.
+spends random bits only on undecided lanes. Once these are in place, kernels written in Python reach
+\dslIntPctCuda\,\% (int8, \dslIntBackend) and \dslMscPctCuda\,\% (packed, \dslMscBackend) of the
+throughput of the NVRTC-compiled CUDA~C reference; none of them overtakes it.
 
 \paragraph{Threats to validity.} (i) A single laptop GPU: clocks and power limits throttle under
 sustained load, and the copy ceiling itself varies by a few percent between runs; we report
-medians with min/max. (ii) During development the GPU was shared; only the final serial run on an
-idle GPU is publishable (see the banner). (iii) The CUDA~C reference is compiled by NVRTC with
+medians with min/max. (ii) During development the GPU was shared; every number reported here comes
+from one serial run on an idle GPU. (iii) The CUDA~C reference is compiled by NVRTC with
 \texttt{-use\_fast\_math}, not by \texttt{nvcc} with tuned flags; a different compiler could
 change the reference by some percent. (iv) The lazy kernel's cost depends on temperature (fewer
 undecided lanes deep in the ordered phase); we benchmark at $T_c$. (v) The packed variant is
@@ -323,8 +326,8 @@ implemented for 2D Metropolis only; heat bath and 3D use int8 spins.
 \section{Conclusion}
 A single Python package drives seven backends of the same algorithm with bit-identical results
 and validated physics. On a laptop GPU, Python-hosted multi-spin-coding kernels reach
-\bestFlips{} spin flips per ns, a large fraction of the memory roofline, by spending effort where
-the roofline says it matters: bytes per update and random bits per spin.
+\bestFlips{} spin flips per ns (\bestPctCopy\,\% of the memory roofline; \bestPyFlips{} for a
+kernel written entirely in a Python DSL) by spending effort where the roofline says it matters: bytes per update and random bits per spin.
 
 \section*{Code availability}
 Code, benchmark JSON, figure scripts and this paper: \url{https://github.com/walidhemati/pyising}

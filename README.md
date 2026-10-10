@@ -18,14 +18,12 @@ seven backends, bit-identical results, and a roofline for every rung.**
 ## Headline result
 
 <!-- headline:start -->
-> **PROVISIONAL**: development run on a shared GPU (`results/provisional.json`); final numbers come from `bench/run.py --full`.
-
 | | |
 |---|---|
-| **Fastest variant** | CUDA C (CuPy) (msc), L = 16384 |
-| **Throughput** | **326.8 spin flips / ns** (2D Metropolis, T = T_c) |
-| **% of ceiling** | 33.9 % of measured copy bandwidth (361 GB/s), 27.4 % of nominal (448 GB/s), at 0.375 B/update |
-| **Fastest pure-Python-DSL kernel** | Warp (msc): 280.4 flips/ns (29.1 % of copy BW) |
+| **Fastest variant** | CUDA C (CuPy) (msc), L = 4096 |
+| **Throughput** | **419.3 spin flips / ns** (2D Metropolis, T = T_c) |
+| **% of ceiling** | 43.6 % of measured copy bandwidth (361 GB/s), 35.1 % of nominal (448 GB/s), at 0.375 B/update |
+| **Fastest pure-Python-DSL kernel** | Warp (msc): 371.9 flips/ns (38.6 % of copy BW) |
 | **GPU** | NVIDIA GeForce RTX 3070 Laptop GPU (single laptop GPU) |
 <!-- headline:end -->
 
@@ -99,24 +97,24 @@ simulations (3D energies). Summary from `results/validation.json`:
 ![scaling](figures/scaling.png)
 
 <!-- table:start -->
-Source: `results/provisional.json`.
+Source: `results/rtx3070-laptop.json`.
 
 | backend | variant | L | flips/ns | eff. GB/s | % of copy BW |
 |---|---|---:|---:|---:|---:|
-| NumPy | int8 | 1024 | 0.04 | 0.1 | 0.0 |
-| torch eager | int8 | 1024 | 0.21 | 0.6 | 0.2 |
-| torch.compile | int8 | 4096 | 2.42 | 7.2 | 2.0 |
-| Triton | int8 | 1024 | 23.97 | 71.9 | 19.9 |
-| Warp | int8 | 2048 | 17.66 | 53.0 | 14.7 |
-| Numba-CUDA | int8 | 2048 | 19.46 | 58.4 | 16.2 |
-| CUDA C (CuPy) | int8 | 16384 | 37.55 | 112.7 | 31.2 |
-| CUDA C (CuPy) | int8-rng-per-site | 4096 | 25.05 | 75.1 | 20.8 |
-| NumPy | msc | 1024 | 0.12 | 0.1 | 0.0 |
-| Triton | msc | 32768 | 176.02 | 66.0 | 18.3 |
-| Warp | msc | 16384 | 280.37 | 105.1 | 29.1 |
-| Numba-CUDA | msc | 8192 | 248.23 | 93.1 | 25.8 |
-| CUDA C (CuPy) | msc | 16384 | 326.76 | 122.5 | 33.9 |
-| CUDA C (CuPy) | msc-eager32 | 16384 | 160.06 | 60.0 | 16.6 |
+| NumPy | int8 | 1024 | 0.05 | 0.1 | 0.0 |
+| torch eager | int8 | 8192 | 0.49 | 1.5 | 0.4 |
+| torch.compile | int8 | 8192 | 9.60 | 28.8 | 8.0 |
+| Triton | int8 | 2048 | 58.33 | 175.0 | 48.5 |
+| Warp | int8 | 2048 | 45.31 | 135.9 | 37.7 |
+| Numba-CUDA | int8 | 2048 | 43.64 | 130.9 | 36.3 |
+| CUDA C (CuPy) | int8 | 2048 | 80.81 | 242.4 | 67.2 |
+| CUDA C (CuPy) | int8-rng-per-site | 4096 | 49.91 | 149.7 | 41.5 |
+| NumPy | msc | 1024 | 0.12 | 0.0 | 0.0 |
+| Triton | msc | 131072 | 342.43 | 128.4 | 35.6 |
+| Warp | msc | 16384 | 371.93 | 139.5 | 38.6 |
+| Numba-CUDA | msc | 16384 | 327.36 | 122.8 | 34.0 |
+| CUDA C (CuPy) | msc | 4096 | 419.32 | 157.2 | 43.6 |
+| CUDA C (CuPy) | msc-eager32 | 4096 | 211.81 | 79.4 | 22.0 |
 <!-- table:end -->
 
 ## How it works
@@ -127,7 +125,7 @@ Source: `results/provisional.json`.
 3. **Triton, Warp, Numba-CUDA**: hand-written kernels in Python; one Philox call serves 4 sites.
 4. **CUDA C (CuPy/NVRTC)**: the hand-tuned reference (`char4` loads, compile-time sizes).
 5. **Multi-spin coding** (Triton, Warp, Numba, CUDA C): 64 spins per word, 8x less traffic;
-   the bottleneck moves to the RNG, which the lazy bitwise comparison attacks.
+   random numbers become the largest cost, which the lazy bitwise comparison attacks.
 
 Memory model: a half sweep reads both colour arrays once and writes one, so an update costs
 3 spin-sizes of DRAM traffic. Ceilings: `bench/roofline.py` (copy bandwidth, Philox calls/ns).
